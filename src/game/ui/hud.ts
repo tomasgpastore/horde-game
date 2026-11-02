@@ -20,7 +20,12 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   .xpbar{position:absolute;left:0;right:0;bottom:0;height:8px;background:#0008}.xpbar i{display:block;height:100%;width:0;background:#4de8ff;box-shadow:0 0 10px #4de8ff}
   .cards{position:absolute;inset:0;display:none;align-items:center;justify-content:center;gap:22px;background:#000a;pointer-events:auto}
   .card{width:220px;padding:26px 18px;background:linear-gradient(#2a2538,#17141f);border:2px solid #ffc857;border-radius:12px;text-align:center;cursor:pointer;font-family:Rajdhani,system-ui,sans-serif;transition:transform .12s;box-shadow:0 0 22px #ffc85755}
-  .card:hover{transform:translateY(-8px) scale(1.04)}.card h3{margin:0 0 10px;font-size:26px;color:#ffc857}.card p{margin:0;font-size:17px;color:#ddd}.card small{opacity:.6}
+  .card{animation:cardIn .35s cubic-bezier(.2,1.4,.4,1) both;position:relative;overflow:hidden}.card:nth-child(2){animation-delay:.07s}.card:nth-child(3){animation-delay:.14s}.card:nth-child(4){animation-delay:.21s}
+  @keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.9)}to{opacity:1;transform:none}}
+  .card.w{border-color:#3df2ff;box-shadow:0 0 26px #3df2ff66,inset 0 0 30px #3df2ff18}.card.w h3{color:#9fe8ff}
+  .card::after{content:'';position:absolute;inset:-60% -30%;background:linear-gradient(105deg,transparent 42%,#ffffff22 50%,transparent 58%);transform:translateX(-120%);transition:transform .6s}.card:hover::after{transform:translateX(120%)}
+  .card svg{animation:iconPulse 2.2s ease-in-out infinite}@keyframes iconPulse{50%{transform:scale(1.07);filter:brightness(1.25)}}
+  .card:hover{transform:translateY(-12px) scale(1.06);box-shadow:0 0 38px #ffc857aa}.card.w:hover{box-shadow:0 0 44px #3df2ffaa}.card h3{margin:0 0 10px;font-size:26px;color:#ffc857}.card p{margin:0;font-size:17px;color:#ddd}.card small{opacity:.6}
   .gear{position:absolute;left:14px;top:40px;display:flex;flex-direction:column;gap:6px}.gear-row{display:flex;gap:6px;min-height:34px}
   .gi{position:relative;width:34px;height:34px;border-radius:7px;background:linear-gradient(#262035,#14111c);border:1.5px solid #ffc857aa;display:flex;align-items:center;justify-content:center;box-shadow:0 0 8px #0008}
   .gi.p{border-color:#4de8ffaa;width:28px;height:28px}.gi svg{width:78%;height:78%;filter:drop-shadow(0 0 3px currentColor)}
@@ -61,7 +66,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
     if (key !== shown) { shown = key;
       if (!key) cards.style.display = 'none';
       else { cards.style.display = 'flex'; cards.innerHTML = '<h2>LEVEL UP</h2>'; s.levelChoices.forEach((id, i) => {
-        const u = upgradeDef(id), w = p.weapons.find(w => 'w:' + w.id === id), c = document.createElement('div'); c.className = 'card';
+        const u = upgradeDef(id), w = p.weapons.find(w => 'w:' + w.id === id), c = document.createElement('div'); c.className = id.startsWith('w:') ? 'card w' : 'card';
         c.innerHTML = `<div style="filter:drop-shadow(0 0 10px #0008);margin-bottom:6px">${iconSvg(id)}</div><h3>${u.name}</h3><p>${u.desc}</p><br><small>${w ? 'Lv ' + w.level + ' → ' + (w.level + 1) : 'Press ' + (i + 1)}</small>`;
         c.onclick = () => pick(i); cards.appendChild(c); }); }
     }
