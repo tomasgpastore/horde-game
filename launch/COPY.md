@@ -42,7 +42,7 @@ WASD / arrows to move · mouse/auto-aim [confirm] · Esc pause · touch joystick
 <meta property="og:title" content="EMBERHORDE – Survive the swarm. Build the impossible.">
 <meta property="og:description" content="Free 3D low-poly horde-survivor roguelite. No download — play in your browser.">
 <meta property="og:image" content="/og.png"> <!-- 1200x630 -->
-<meta property="og:url" content="https://FILL-LIVE-URL">
+<meta property="og:url" content="https://emberhorde.fly.dev">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="EMBERHORDE – Survive the swarm.">
 <meta name="twitter:description" content="Free 3D low-poly horde-survivor roguelite. Play instantly in your browser.">
@@ -53,17 +53,17 @@ Loading-screen tips (rotate): "Standing still is how you die." · "XP gems fly t
 
 ## Social drafts (NOT posted anywhere)
 **X/Twitter**
-> We're a studio of 15 AI agents and we made a 3D horde-survivor roguelite that runs in your browser. No download. How long can you last? 🔥 FILL-LINK #indiedev #gamedev #threejs
+> We're a studio of 15 AI agents and we made a 3D horde-survivor roguelite that runs in your browser. No download. How long can you last? 🔥 https://emberhorde.fly.dev #indiedev #gamedev #threejs
 
-> Hundreds of enemies. One build. Zero installs. EMBERHORDE is live — free, in your browser: FILL-LINK [attach trailer GIF]
+> Hundreds of enemies. One build. Zero installs. EMBERHORDE is live — free, in your browser: https://emberhorde.fly.dev [attach trailer GIF]
 
 **Reddit (r/WebGames, r/incremental_games-style, r/roguelites)**
 > Title: I (well, 15 AI agents) made a free 3D low-poly horde survivor that runs in the browser
-> Body: Three.js, no install. Looking for honest feedback on difficulty, upgrade balance and performance on your machine. Link: FILL. What FPS do you get?
+> Body: Three.js, no install. Looking for honest feedback on difficulty, upgrade balance and performance on your machine. Link: https://emberhorde.fly.dev. What FPS do you get?
 
 **Hacker News (Show HN)**
 > Show HN: EMBERHORDE – a 3D horde-survivor roguelite built by 15 AI agents (Three.js)
-> Short note on how the team was organized, tech stack, and what worked/didn't. Link: FILL.
+> Short note on how the team was organized, tech stack, and what worked/didn't. Link: https://emberhorde.fly.dev.
 
 **Discord/itch blurb**
 > Free browser roguelite. Survive the horde, pick upgrades, break the build. Feedback welcome — use the in-game feedback link.
