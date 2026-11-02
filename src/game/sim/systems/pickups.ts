@@ -15,7 +15,7 @@ export const pickupSystem: System = { name: 'pickups', update(s, c) {
   }
   if (p.xp >= p.xpToNext && s.phase === 'running') {
     p.xp -= p.xpToNext; p.level++; p.xpToNext = xpToNext(p.level); // Designer's XP curve (content/balance.ts)
-    const ch = rollChoices(p, c.rng, 3, s.bossReward); s.bossReward = false;
+    const ch = rollChoices(p, c.rng, 3, false); s.bossReward = false; // launch scope: boss reward = a normal level-up card; evolutions need max level + paired passive
     if (!ch.length) { p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.2); return; } // everything maxed: heal instead of an empty card screen
     s.levelChoices = ch; s.phase = 'levelUp';
     s.events.push({ t: 'levelUp', id: p.id, choices: s.levelChoices.slice() }, { t: 'slow', scale: 0.3, secs: 0.4 });
