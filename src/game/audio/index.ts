@@ -6,16 +6,12 @@ export type { SfxName };
 
 const TICK = 1 / 60;
 
-/** GDD weapons -> fire sounds (keyword match on weapon id). fire_whip intentionally unused. */
-export function fireSound(weapon: string): SfxName {
-  const w = weapon.toLowerCase();
-  if (/blade|orbit|saw/.test(w)) return 'fire_orb';
-  if (/frost|nova|ice/.test(w)) return 'fire_nova';
-  if (/chain|lightning|arc/.test(w)) return 'fire_lightning';
-  if (/lava|trail|flame|fire/.test(w)) return 'fire_flame';
-  if (/spear|lance|arrow/.test(w)) return 'fire_arrow';
-  return 'fire_bolt'; // bolt + default
-}
+/** Exact weapon id -> fire sound (ids per Tech Lead). fire_whip intentionally unused. */
+const FIRE_SOUND: Record<string, SfxName> = {
+  ember_bolt: 'fire_bolt', orbit_blades: 'fire_orb', frost_nova: 'fire_nova',
+  chain_lightning: 'fire_lightning', lava_trail: 'fire_flame', seeker_spears: 'fire_arrow',
+};
+export function fireSound(weapon: string): SfxName { return FIRE_SOUND[weapon] ?? 'fire_bolt'; }
 
 /**
  * Game-facing audio. Call `consume(events, state)` once per sim tick.
@@ -55,7 +51,7 @@ export class Audio {
         case 'dash': sfx.play('dash'); break;
         case 'waveStart': sfx.play('boss_roar', { volume: 0.25, pitch: 1.5 }); break;
         case 'bossSpawn': sfx.play('boss_telegraph'); music.duck(-6, 0.6); sfx.play('boss_roar'); this.setBossFight(true); break;
-        case 'bossDeath': this.setBossFight(false); break;
+        case 'bossDeath': this.setBossFight(false); sfx.play('levelup', { volume: 0.9, pitch: 0.9 }); sfx.play('boss_slam', { volume: 0.6, pitch: 0.7 }); break;
         case 'gameOver': sfx.play('death'); this.setBossFight(false); music.setIntensity(0.05); break;
         default: {
           const t = (e as { t: string }).t;
