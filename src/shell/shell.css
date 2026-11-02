@@ -16,8 +16,8 @@ button.btn{min-width:240px;padding:14px 28px;font:700 20px inherit;font-family:i
  border:2px solid #4a3a66;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:transform .12s,border-color .12s,background .12s}
 button.btn:hover,button.btn:focus-visible{transform:scale(1.05);border-color:var(--acc);background:#2a1d1a;outline:none}
 button.btn.primary{background:linear-gradient(#ff8a4c,#e0501c);border-color:#ffd36b;color:#1a0a04}
-.bar{width:min(420px,70vw);height:14px;border:2px solid #4a3a66;border-radius:8px;overflow:hidden;background:#000}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .2s}
+.loadbar{width:min(420px,70vw);height:14px;border:2px solid #4a3a66;border-radius:8px;overflow:hidden;background:#000}
+.loadbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .2s}
 .panel{background:var(--panel);border:2px solid #4a3a66;border-radius:10px;padding:22px 28px;min-width:min(440px,90vw);max-height:80vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
 .panel label{display:flex;justify-content:space-between;align-items:center;gap:16px}
 .panel input[type=range]{width:200px;accent-color:var(--acc)}
