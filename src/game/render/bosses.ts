@@ -20,6 +20,12 @@ function rig() {
 }
 function finish(r: ReturnType<typeof rig>, radius: number, glowColor: number, anim: (t: number, hp: number, tel: number) => void): Boss {
   const base = new THREE.Color(glowColor).multiplyScalar(1.8), hot = new THREE.Color(0xffffff).multiplyScalar(3);
+  { // fresnel rim: a bright silhouette edge in the boss colour so a dark body still reads against the dark floor / horde (Artist)
+    const rimColor = new THREE.Color(glowColor);
+    for (const m of r.bodies) { m.onBeforeCompile = sh => { sh.uniforms.rimColor = { value: rimColor };
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 rimColor;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += rimColor * pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), 2.6) * 2.0;'); }; m.needsUpdate = true; }
+  }
   const lights = new THREE.PointLight(glowColor, 20, 16, 1.6); lights.position.set(0, 3, 0); r.group.add(lights);
   return {
     group: r.group, radius,
