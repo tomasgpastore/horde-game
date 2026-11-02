@@ -133,8 +133,8 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.3 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
-    if (emissive) { mat.userData.k = k === 'brazier' ? 0.3 : k === 'flame' ? 1.8 : 1; glowMats.push(mat); }
+    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.1 : k === 'shroom' || k === 'flower' ? 0.25 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
+    if (emissive) { mat.userData.k = k === 'brazier' ? 0.1 : k === 'flame' ? 0.5 : k === 'shroom' || k === 'flower' ? 0.25 : 1; glowMats.push(mat); }
     const im = new THREE.InstancedMesh(g, mat, lst.length); lst.forEach((l, i) => { im.setMatrixAt(i, l.m); im.setColorAt(i, l.c); });
     if (k === 'shard') shards = im; im.castShadow = k !== 'bone' && k !== 'shard'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
   }
