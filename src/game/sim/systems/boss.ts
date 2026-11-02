@@ -16,7 +16,7 @@ export const bossSystem: System = { name: 'boss', update(s, c) {
   }
   const b = s.boss, i = b.idx, d = BOSSES[b.id];
   if (!e.alive[i] || e.kind[i] !== BOSS_KIND) { // killed
-    s.events.push({ t: 'bossDeath', x: e.x[i], z: e.z[i], bossId: b.id });
+    s.events.push({ t: 'bossDeath', x: e.x[i], z: e.z[i], bossId: b.id }, { t: 'freeze', ms: 120 });
     for (let k = 0; k < 12; k++) spawnGem(s, e.x[i] + Math.cos(k) * 1.2, e.z[i] + Math.sin(k) * 1.2, 5);
     s.boss = null; s.phase = 'gameOver'; s.events.push({ t: 'gameOver', victory: true }); return;
   }
