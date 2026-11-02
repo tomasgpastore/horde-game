@@ -98,6 +98,8 @@ export class Game {
     const pk = this.sim.state.pickups; let bd = 144, gx = 0, gz = 0;
     for (let i = 0; i < pk.count; i++) if (pk.alive[i]) { const dx = pk.x[i] - me.x, dz = pk.z[i] - me.z, d2 = dx * dx + dz * dz; if (d2 < bd) { bd = d2; gx = dx; gz = dz; } }
     if (bd < 144) { const l = Math.sqrt(bd) || 1; sx += gx / l * 0.12; sz += gz / l * 0.12; }
+    // dodge the boss charge: while the red lane is showing (telegraph) or the boss is charging, sidestep perpendicular to the lane
+    const bs = this.sim.state.boss; if (bs && bs.mode >= 1) { const e2 = this.sim.state.enemies, rx = me.x - e2.x[bs.idx], rz = me.z - e2.z[bs.idx], proj = rx * bs.dx + rz * bs.dz, perp = rx * -bs.dz + rz * bs.dx; if (proj > -2 && Math.abs(perp) < 4.5) { const sg = perp >= 0 ? 1 : -1; sx += -bs.dz * sg * 3; sz += bs.dx * sg * 3; } }
     this.botT += 1 / 60; const a = this.botT * 0.5;
     // stay in the middle (good trailer framing): pull toward arena centre, ramping hard beyond ~9u so the bot never reaches the edge
     const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 6) / 10); const w = 0.02 + 4 * pull * pull + (r > 22 ? 50 : 0); // hard inward override beyond 22u (camera clamp is at R-9)

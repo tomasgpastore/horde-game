@@ -14,17 +14,17 @@ export const ENEMIES: EnemyDef[] = [
 export const BOSS_KIND = 8;
 /** hp/speed/charge per boss id (GDD: Hollow Stag min5, Bell-Warden min10, The Unlit min15). */
 export const BOSSES: Record<string, { name: string; hp: number; speed: number; charge: number; windup: number; cd: number }> = {
-  hollow_stag: { name: 'The Hollow Stag', hp: 1800, speed: 2.6, charge: 17, windup: 0.9, cd: 3.2 },
-  bell_warden: { name: 'The Bell-Warden', hp: 5000, speed: 2.9, charge: 19, windup: 0.8, cd: 2.8 },
-  the_unlit: { name: 'The Unlit', hp: 16000, speed: 3.3, charge: 22, windup: 0.7, cd: 2.4 },
+  hollow_stag: { name: 'The Hollow Stag', hp: 2400, speed: 2.6, charge: 17, windup: 0.9, cd: 3.2 },
+  bell_warden: { name: 'The Bell-Warden', hp: 6500, speed: 2.9, charge: 19, windup: 0.8, cd: 2.8 },
+  the_unlit: { name: 'The Unlit', hp: 20000, speed: 3.3, charge: 22, windup: 0.7, cd: 2.4 },
 };
 /** Boss phases by remaining-hp fraction (first entry whose hpBelow >= current fraction, scanning from the last). speed/cd multipliers, radial shot burst after each charge, periodic summons. */
 export interface BossPhaseDef { hpBelow: number; speedMult: number; cdMult: number; burst?: { count: number; speed: number; dmg: number; life: number }; summon?: { kind: number; count: number; everyS: number } }
 export const BOSS_PHASES: Record<string, BossPhaseDef[]> = {
   hollow_stag: [ // charge lines + radial antler bursts
     { hpBelow: 1.0, speedMult: 1, cdMult: 1 },
-    { hpBelow: 0.66, speedMult: 1.1, cdMult: 0.85, burst: { count: 10, speed: 7, dmg: 7, life: 2.4 } },
-    { hpBelow: 0.33, speedMult: 1.25, cdMult: 0.7, burst: { count: 16, speed: 8, dmg: 8, life: 2.6 } },
+    { hpBelow: 0.66, speedMult: 1.1, cdMult: 0.85, burst: { count: 8, speed: 7, dmg: 7, life: 2.4 } },
+    { hpBelow: 0.33, speedMult: 1.25, cdMult: 0.7, burst: { count: 12, speed: 8, dmg: 8, life: 2.6 } },
   ],
   bell_warden: [ // slam shockwave rings + summons Wraiths
     { hpBelow: 1.0, speedMult: 1, cdMult: 1, burst: { count: 12, speed: 6, dmg: 7, life: 2.2 } },
