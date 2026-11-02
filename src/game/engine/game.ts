@@ -16,7 +16,7 @@ export class Game {
     this.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%'; this.ui.style.cssText = 'position:absolute;inset:0;pointer-events:none;color:#fff';
     parent.append(this.canvas, this.ui);
     this.input = new KeyboardMouse(this.canvas);
-    this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui);
+    this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui, i => this.choose(i));
     (window as any).__game = this; // QA hook
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
   }
@@ -24,18 +24,32 @@ export class Game {
     const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff);
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
+  choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
   start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); }
   pause() { this.paused = true; } resume() { this.paused = false; this.last = performance.now(); }
   quit() { this.running = false; this.paused = false; this.reset(); }
   applySettings(s: Settings) { this.settings = s; /* TODO Engine: volume -> audio, quality -> pixelRatio/post-fx, shake */ }
   gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, time: s.time, victory } })); }
+  /** ?autoplay=1 debug bot (trailer capture): kites away from the horde's centre of mass; invulnerable; auto-picks cards. */
+  autoplay = new URLSearchParams(location.search).get('autoplay') === '1'; private botT = 0;
+  bot(me: { x: number; z: number }): PlayerInput {
+    const e = this.sim.state.enemies; let sx = 0, sz = 0, n = 0;
+    for (let i = 0; i < e.count; i++) if (e.alive[i]) { const dx = me.x - e.x[i], dz = me.z - e.z[i], d2 = dx * dx + dz * dz + 1; if (d2 < 150) { sx += dx / d2; sz += dz / d2; n++; } }
+    const pk = this.sim.state.pickups; let bd = 144, gx = 0, gz = 0;
+    for (let i = 0; i < pk.count; i++) if (pk.alive[i]) { const dx = pk.x[i] - me.x, dz = pk.z[i] - me.z, d2 = dx * dx + dz * dz; if (d2 < bd) { bd = d2; gx = dx; gz = dz; } }
+    if (bd < 144) { const l = Math.sqrt(bd) || 1; sx += gx / l * 0.12; sz += gz / l * 0.12; }
+    this.botT += 1 / 60; const a = this.botT * 0.5;
+    let mx = sx + Math.cos(a) * 0.02 - me.x * 0.0008, mz = sz + Math.sin(a) * 0.02 - me.z * 0.0008; const l = Math.hypot(mx, mz) || 1;
+    return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
+  }
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
     const me = this.sim.state.players[0];
+    if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
     if (this.running && !this.paused) {
       this.acc += dt;
-      const inp: PlayerInput = this.input.poll(me, this.renderer.camera);
+      const inp: PlayerInput = this.autoplay ? this.bot(me) : this.input.poll(me, this.renderer.camera);
       const m = this.shellInput.move; if (this.shellInput.touch && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; }
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;

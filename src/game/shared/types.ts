@@ -66,6 +66,8 @@ export interface SimState {
   events: SimEvent[];
   phase: 'running' | 'levelUp' | 'gameOver';
   wave: number; kills: number; gold: number;
+  /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
+  levelChoices: string[];
 }
 
 /** Arena = world module's contract with sim (collision/spawn) and render (scenery). */

@@ -1,11 +1,28 @@
 import type { System } from '../system';
-import { alloc } from '../pools';
-import { MAX_ENEMIES } from '@shared/types';
-/** STUB (Gameplay + World): spawns a placeholder swarm that chases player 0 so perf/render can be tested from minute 0. */
+import { enemyDef } from '../content/enemies';
+import { head, next, cellX, DIM } from './grid';
+/** Chase nearest living player, light separation via grid, contact damage with i-frames, death → gameOver. */
 export const enemySystem: System = { name: 'enemies', update(s, c) {
-  const e = s.enemies, p = s.players[0];
+  const e = s.enemies;
+  let tgt = s.players[0]; // TODO coop: nearest player
+  const alive = s.players.some(p => p.active && !p.dead);
+  for (const p of s.players) { if (p.iframes > 0) p.iframes -= c.dt; }
   for (let i = 0; i < e.count; i++) { if (!e.alive[i]) continue;
-    const dx = p.x - e.x[i], dz = p.z - e.z[i], d = Math.hypot(dx, dz) || 1, sp = 2.5;
-    e.vx[i] = dx / d * sp; e.vz[i] = dz / d * sp; e.x[i] += e.vx[i] * c.dt; e.z[i] += e.vz[i] * c.dt; e.facing[i] = Math.atan2(dx, dz);
+    const def = enemyDef(e.kind[i]); if (e.hitFlash[i] > 0) e.hitFlash[i] -= c.dt;
+    const dx = tgt.x - e.x[i], dz = tgt.z - e.z[i], d = Math.hypot(dx, dz) || 1;
+    let sx = 0, sz = 0; const gx = cellX(e.x[i]), gz = cellX(e.z[i]);
+    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
+      const cx = gx + ox, cz = gz + oz; if (cx < 0 || cz < 0 || cx >= DIM || cz >= DIM) continue;
+      for (let j = head[cz * DIM + cx], n = 0; j >= 0 && n < 6; j = next[j], n++) { if (j === i || !e.alive[j]) continue;
+        const ax = e.x[i] - e.x[j], az = e.z[i] - e.z[j], r = def.radius + enemyDef(e.kind[j]).radius, d2 = ax * ax + az * az;
+        if (d2 < r * r && d2 > 1e-6) { const dd = Math.sqrt(d2), f = (r - dd) / r; sx += ax / dd * f; sz += az / dd * f; } }
+    }
+    e.vx[i] = dx / d * def.speed + sx * 3; e.vz[i] = dz / d * def.speed + sz * 3;
+    e.x[i] += e.vx[i] * c.dt; e.z[i] += e.vz[i] * c.dt; e.facing[i] = Math.atan2(dx, dz);
+    if (!tgt.dead && d < def.radius + 0.4 && tgt.iframes <= 0) {
+      tgt.hp -= def.dmg; tgt.iframes = 0.5; s.events.push({ t: 'playerHurt', id: tgt.id, dmg: def.dmg });
+      if (tgt.hp <= 0) { tgt.dead = true; tgt.hp = 0; }
+    }
   }
+  if (alive && !s.players.some(p => p.active && !p.dead)) { s.phase = 'gameOver'; s.events.push({ t: 'gameOver', victory: false }); }
 } };

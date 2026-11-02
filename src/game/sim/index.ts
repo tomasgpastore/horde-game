@@ -6,6 +6,11 @@ import { playerSystem } from './systems/player';
 import { enemySystem } from './systems/enemies';
 import { spawner } from './systems/spawner';
 import { arenaCollision } from './systems/arenaCollision';
+import { gridSystem } from './systems/grid';
+import { weaponSystem } from './systems/weapons';
+import { projectileSystem } from './systems/projectiles';
+import { pickupSystem } from './systems/pickups';
+import { applyUpgrade } from './content/upgrades';
 
 export function createState(seed: number, arena: ArenaDef, playerCount = 1): SimState {
   const players = Array.from({ length: MAX_PLAYERS }, (_, id) => {
@@ -15,16 +20,25 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
       stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 2.5, cooldownMult: 1 }, dead: false };
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
-    events: [], phase: 'running', wave: 0, kills: 0, gold: 0 };
+    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, levelChoices: [] };
 }
 
 /** Deterministic fixed-step simulation. Same (seed, input stream) => same state. Runs in browser now, Node server later. */
 export class Sim {
-  rng: Rng; systems: System[] = [spawner, playerSystem, enemySystem, arenaCollision];
+  rng: Rng; systems: System[] = [spawner, playerSystem, gridSystem, weaponSystem, projectileSystem, enemySystem, arenaCollision, pickupSystem];
   constructor(public state: SimState, public arena: ArenaDef) { this.rng = new Rng(state.seed); }
   register(sys: System, before?: string) {
     const i = before ? this.systems.findIndex(s => s.name === before) : -1;
     if (i >= 0) this.systems.splice(i, 0, sys); else this.systems.push(sys);
+  }
+  /** Resolve a level-up card. Called by UI/net layer while phase==='levelUp'. */
+  choose(index: number) {
+    const s = this.state; if (s.phase !== 'levelUp') return;
+    const id = s.levelChoices[index]; if (!id) return;
+    applyUpgrade(s.players[0], id);
+    s.levelChoices = []; s.phase = 'running';
+    // chain-level if enough xp is banked
+    pickupSystem.update(s, { dt: 0, rng: this.rng, arena: this.arena, inputs: [] });
   }
   step(inputs: PlayerInput[]) {
     const s = this.state; s.events.length = 0;
