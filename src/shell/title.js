@@ -114,7 +114,7 @@ export async function createTitle({ onFallback } = {}) {
   const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.65, 0.15); composer.addPass(bloom); composer.addPass(new OutputPass());
   const resize = () => { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 68 : 50; camera.updateProjectionMatrix(); setOffset(); };
   // wide: menu is left-aligned, hero sits at ~65% x; narrow/portrait: menu centred over a dimmed scene, hero above it
-  function setOffset() { const w = innerWidth, h = innerHeight; if (w / h > 1.2) camera.setViewOffset(w, h, -w * 0.15, h * 0.04, w, h); else camera.setViewOffset(w, h, 0, h * 0.2, w, h); camera.updateProjectionMatrix(); }
+  function setOffset() { const w = innerWidth, h = innerHeight; if (w / h > 1.2) camera.setViewOffset(w, h, -w * 0.15, h * 0.04, w, h); else camera.setViewOffset(w, h, 0, h * 0.36, w, h); camera.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
 
   const dummy = new THREE.Object3D(); const V = new THREE.Vector3(); let t = 0, last = 0, raf = 0, on = false, zoom = 0, zoomTarget = 0, frames = 0, bloomOn = true, acc = 0, win = 0, guardDone = false;
