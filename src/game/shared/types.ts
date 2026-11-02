@@ -60,6 +60,10 @@ export type SimEvent =
   | { t: 'freeze'; ms: number }                       // hit-stop request (client skips stepping for ms)
   | { t: 'slow'; scale: number; secs: number }          // slow-mo request (level-up etc.)
   | { t: 'evolve'; id: number; weapon: string }         // weapon reached max level (evolution moment)
+  | { t: 'bossTelegraph'; x: number; z: number; dx: number; dz: number; windup: number; bossId: string } // charge wind-up starts (red lane); VFX/audio cue
+  | { t: 'bossSlam'; x: number; z: number; bossId: string }                                              // charge ends / impact
+  | { t: 'telegraph'; x: number; z: number; kind: number }                                             // an enemy is winding up an attack (spitter: red ring)
+  | { t: 'biome'; next: string }                        // boss of this biome died: client swaps arena after the reward card
   | { t: 'gameOver'; victory: boolean };
 
 export interface SimState {
@@ -69,7 +73,7 @@ export interface SimState {
   enemies: EnemyPool; projectiles: ProjectilePool; pickups: PickupPool;
   events: SimEvent[];
   phase: 'running' | 'levelUp' | 'gameOver';
-  wave: number; kills: number; gold: number; eliteCount: number; swarmCount: number;
+  wave: number; kills: number; gold: number; eliteCount: number; swarmCount: number; biomeT0: number; biome: number; bossReward: boolean;
   /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
   levelChoices: string[];
   /** World-owned spawner state (plain numbers => snapshot/rollback safe). */

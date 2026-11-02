@@ -7,8 +7,9 @@ interface Entry { mesh: THREE.InstancedMesh; orig: Float32Array; x: Float32Array
 const MAX_H = 1.5, NEAR_CAP_R = 16;
 export class OccluderFader {
   private entries: Entry[] = []; private m = new THREE.Matrix4(); private e = new THREE.Matrix4();
-  constructor(scene: THREE.Scene) {
-    scene.traverse(o => { const im = o as THREE.InstancedMesh; if (!im.isInstancedMesh) return;
+  constructor(scene: THREE.Scene, roots?: THREE.Object3D[]) {
+    const visit = (f: (o: THREE.Object3D) => void) => roots ? roots.forEach(r => r.traverse(f)) : scene.traverse(f);
+    visit(o => { const im = o as THREE.InstancedMesh; if (!im.isInstancedMesh) return;
       const n = im.count, orig = new Float32Array(n * 16), x = new Float32Array(n), z = new Float32Array(n), cap = new Float32Array(n).fill(1);
       im.geometry.computeBoundingBox(); const bb = im.geometry.boundingBox!, gh = Math.max(0.01, bb.max.y - Math.min(0, bb.min.y)), capped = !im.userData.noHeightCap;
       for (let i = 0; i < n; i++) { im.getMatrixAt(i, this.m); this.m.toArray(orig, i * 16); x[i] = this.m.elements[12]; z[i] = this.m.elements[14];

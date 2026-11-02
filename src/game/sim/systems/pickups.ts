@@ -12,7 +12,7 @@ export const pickupSystem: System = { name: 'pickups', update(s, c) {
   }
   if (p.xp >= p.xpToNext && s.phase === 'running') {
     p.xp -= p.xpToNext; p.level++; p.xpToNext = xpToNext(p.level); // Designer's XP curve (content/balance.ts)
-    s.levelChoices = rollChoices(p, c.rng); s.phase = 'levelUp';
+    s.levelChoices = rollChoices(p, c.rng, 3, s.bossReward); s.bossReward = false; s.phase = 'levelUp';
     s.events.push({ t: 'levelUp', id: p.id, choices: s.levelChoices.slice() }, { t: 'slow', scale: 0.3, secs: 0.4 });
   }
 } };

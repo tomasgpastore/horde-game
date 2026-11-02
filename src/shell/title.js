@@ -81,7 +81,7 @@ export async function createTitle({ onFallback } = {}) {
   ring.position.y = 0.02; scene.add(ring);
 
   // hero silhouette with lantern
-  const hero = new THREE.Group(); const dark = new THREE.MeshStandardMaterial({ color: 0x16203a, roughness: 0.8, flatShading: true, emissive: 0x0b3a52, emissiveIntensity: 0.55 });
+  const hero = new THREE.Group(); const dark = new THREE.MeshStandardMaterial({ color: 0x1a2a4a, roughness: 0.85, flatShading: true, emissive: 0x0a3550, emissiveIntensity: 0.3 });
   const add = (geo, mat, x, y, z, rx = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); hero.add(m); return m; };
   add(new THREE.ConeGeometry(0.62, 1.8, 6), dark, 0, 0.9, 0); add(new THREE.IcosahedronGeometry(0.23, 0), dark, 0, 1.92, 0); add(new THREE.ConeGeometry(0.3, 0.5, 6), dark, 0, 2.1, -0.02);
   add(new THREE.CylinderGeometry(0.1, 0.12, 0.7, 5), dark, 0.42, 1.35, 0.18, 0.5, -0.5);
@@ -93,9 +93,9 @@ export async function createTitle({ onFallback } = {}) {
   const cy = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3df2ff).multiplyScalar(3), toneMapped: false });
   const hem = add(new THREE.TorusGeometry(0.66, 0.07, 4, 16), cy, 0, 0.06, 0, Math.PI / 2);
   add(new THREE.BoxGeometry(0.07, 0.05, 0.05), cy, -0.09, 1.9, 0.2); add(new THREE.BoxGeometry(0.07, 0.05, 0.05), cy, 0.09, 1.9, 0.2);
-  { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(160,250,255,.7)'); gr.addColorStop(0.35, 'rgba(61,242,255,.45)'); gr.addColorStop(1, 'rgba(61,242,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); halo.scale.setScalar(0.85); halo.position.copy(lantern.position); hero.add(halo); }
-  const rimL = new THREE.PointLight(0x3df2ff, 16, 12, 1.4); rimL.position.set(-1.6, 2.2, -1.4); hero.add(rimL);
+  { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(160,250,255,.42)'); gr.addColorStop(0.35, 'rgba(61,242,255,.45)'); gr.addColorStop(1, 'rgba(61,242,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); halo.scale.setScalar(0.55); halo.position.copy(lantern.position); hero.add(halo); }
+  const rimL = new THREE.PointLight(0x3df2ff, 11, 12, 1.4); rimL.position.set(-1.6, 2.2, -1.4); hero.add(rimL);
   hero.scale.setScalar(1.3);
   scene.add(hero);
   scene.add(new THREE.HemisphereLight(0x39406e, 0x07080f, 0.7));
@@ -123,9 +123,9 @@ export async function createTitle({ onFallback } = {}) {
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 3.5);
     const ang = t * 0.05, R = (11 + Math.sin(t * 0.1) * 0.9) * (1 - zoom * 0.7), el = 35 * Math.PI / 180;
     camera.position.set(Math.cos(ang) * R * Math.cos(el), R * Math.sin(el) * (1 - zoom * 0.3), Math.sin(ang) * R * Math.cos(el)); camera.lookAt(0, 1.5 + zoom * 0.5, 0);
-    hero.position.y = Math.sin(t * 1.6) * 0.06; hero.rotation.y = Math.PI / 2 - ang + 0.6; /* 3/4 view toward camera */ lantern.rotation.y = t * 1.2;
+    hero.position.y = Math.sin(t * 1.6) * 0.06; hero.rotation.y = Math.PI / 2 - ang + 0.6; /* 3/4 view toward camera */ lantern.rotation.y = t * 1.2; hero.rotation.z = Math.sin(t * 0.9) * 0.025; hero.rotation.x = Math.sin(t * 0.7 + 1) * 0.02; /* idle sway */
     const f = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.3) + 0.06 * Math.sin(t * 31); warm.intensity = 6 * f; cyan.intensity = 14 * (0.93 + 0.07 * Math.sin(t * 4));
-    ring.material.opacity = 0.26 + 0.08 * Math.sin(t * 0.8); ring.rotation.y = t * 0.02;
+    ring.material.opacity = 0.3 + 0.14 * Math.sin(t * 1.3) * Math.sin(t * 0.55 + 1); ring.scale.setScalar(1 + 0.012 * Math.sin(t * 1.3)); ring.rotation.y = t * 0.02;
     camera.getWorldDirection(V); rim.position.set(-V.z * 6 - V.x * 5, 4, V.x * 6 - V.z * 5); rim.target.position.set(0, 1.5, 0);
     for (let i = 0; i < eData.length; i++) { const e = eData[i]; e.a += e.s * dt; const a = e.a, r = e.r + Math.sin(t * 0.3 + e.p) * 0.8;
       dummy.position.set(Math.cos(a) * r, 0.9 * e.sc + Math.sin(t * 0.9 + e.p) * 0.12, Math.sin(a) * r); dummy.rotation.set(0, -a + Math.sin(t * .4 + e.p) * .3, 0); dummy.scale.setScalar(e.sc); dummy.updateMatrix(); eMesh.setMatrixAt(i, dummy.matrix); }

@@ -24,7 +24,7 @@ export const spawner: System = { name: 'spawner', update(s, c) {
   if (wave !== a.lastWave) { a.lastWave = wave; s.wave = wave; s.events.push({ t: 'waveStart', wave });
   }
   const bd = ARENA_BOSS[c.arena.id];
-  if (bd && !a.boss && s.time >= bd.time) { a.boss = true; const ang = c.rng.range(0, Math.PI * 2);
+  if (bd && !a.boss && s.time >= s.biomeT0 + bd.time) { a.boss = true; const ang = c.rng.range(0, Math.PI * 2);
     s.events.push({ t: 'bossSpawn', x: Math.cos(ang) * (R - 4), z: Math.sin(ang) * (R - 4), bossId: bd.bossId }); }
   // alive count
   const e = s.enemies; for (let i = 0; i < e.count; i++) aliveCount += e.alive[i];
