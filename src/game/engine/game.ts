@@ -132,7 +132,7 @@ export class Game {
     }
     this.renderer.render(this.sim.state, this.paused ? 0 : dt, this.acc / TICK_DT);
     this.hud.update(this.sim.state, this.fps); this.indicators.update(this.sim.state, this.renderer.camera, this.canvas.clientWidth, this.canvas.clientHeight);
-    if (this.dbg) { const q = this.renderer.perf; this.dbg.textContent = `${this.fps.toFixed(0)}fps  calls ${q.calls}  tris ${(q.tris / 1000).toFixed(0)}k  enemies ${q.enemyCount}\ncpu ms: total ${q.total.toFixed(2)} | camera ${q.camera.toFixed(2)} | enemies ${q.enemies.toFixed(2)} | particles ${q.particles.toFixed(2)} | pools ${q.pools.toFixed(2)} | arena ${q.arena.toFixed(2)} | submit ${q.submit.toFixed(2)}`; }
+    if (this.dbg) { const q = this.renderer.perf; this.dbg.textContent = `${this.fps.toFixed(0)}fps  calls ${q.calls}  tris ${(q.tris / 1000).toFixed(0)}k  enemies ${q.enemyCount}\nquality ${this.renderer.q}  aliveCap ${this.aliveLimit}\ncpu ms: total ${q.total.toFixed(2)} | camera ${q.camera.toFixed(2)} | enemies ${q.enemies.toFixed(2)} | particles ${q.particles.toFixed(2)} | pools ${q.pools.toFixed(2)} | arena ${q.arena.toFixed(2)} | submit ${q.submit.toFixed(2)}`; }
     this.frames++; this.fpsT += dt; if (this.fpsT >= 1) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
   };
 }
