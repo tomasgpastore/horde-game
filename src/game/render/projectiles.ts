@@ -5,7 +5,7 @@ import type { Vfx } from './vfx';
 /** Instanced drawing of projectiles (bolts+trails, orbit blades, chain sparks, nova rings, lava discs) and XP gems.
  *  Projectile kinds: 0 bolt, 1 orbit blade, 2 nova ring, 3 chain spark, 4 lava patch, 5 seeker spear. Add new kinds HERE, not in renderer.ts. */
 export class ProjectileRenderer {
-  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; lavaRim!: THREE.InstancedMesh; bladeMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh; chestMesh!: THREE.InstancedMesh; beamMesh!: THREE.InstancedMesh;
+  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; bladeMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh; chestMesh!: THREE.InstancedMesh; beamMesh!: THREE.InstancedMesh;
   private m = new THREE.Object3D(); private flashColor = new THREE.Color(0xffffff);
   constructor(scene: THREE.Scene, private vfx: Vfx) {
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
@@ -18,10 +18,10 @@ export class ProjectileRenderer {
     this.projMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3);
     this.ringMesh = new THREE.InstancedMesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }), 64);
     this.ringMesh.frustumCulled = false; scene.add(this.ringMesh);
-    this.lavaMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }), MAX_PROJECTILES); // dim base layer (0.85 read as a solid orange blob); bright rim = lavaRim
+    { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!, gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); // soft glow, no hard edge: overlapping patches add up into one smear
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      this.lavaMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }), MAX_PROJECTILES); }
     this.lavaMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.lavaMesh.frustumCulled = false; this.lavaMesh.count = 0; scene.add(this.lavaMesh);
-    this.lavaRim = new THREE.InstancedMesh(new THREE.RingGeometry(0.8, 1, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }), MAX_PROJECTILES);
-    this.lavaRim.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.lavaRim.frustumCulled = false; this.lavaRim.count = 0; scene.add(this.lavaRim);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4de8ff).multiplyScalar(2.6) }), MAX_PICKUPS);
     { const bg = new THREE.OctahedronGeometry(0.5, 0); bg.scale(0.5, 0.12, 1.5); this.bladeMesh = new THREE.InstancedMesh(bg, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbff6ff).multiplyScalar(3), toneMapped: false }), 64); this.bladeMesh.frustumCulled = false; this.bladeMesh.count = 0; scene.add(this.bladeMesh); }
     this.chestMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb020).multiplyScalar(1.3) }), 64); this.chestMesh.count = 0;
@@ -41,7 +41,7 @@ export class ProjectileRenderer {
         const pp = s.players[0]; this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, Math.atan2(pr.x[i] - pp.x, pr.z[i] - pp.z) + Math.PI / 2, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.bladeMesh.setMatrixAt(bn++, this.m.matrix); continue; }
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       if (k === 4) { const f = Math.min(1, pr.life[i] / 0.6), r = pr.vx[i] * (0.75 + 0.25 * f) * (1 + 0.06 * Math.sin(s.time * 9 + i)); this.m.position.set(pr.x[i], 0.05, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.lavaMesh.setMatrixAt(ln, this.m.matrix);
-        this.flashColor.setHex(0xff4a14).multiplyScalar(0.7 + 0.9 * f); this.lavaMesh.setColorAt(ln, this.flashColor); this.m.position.y = 0.09; this.m.updateMatrix(); this.lavaRim.setMatrixAt(ln, this.m.matrix); this.flashColor.setHex(0xff6a20).multiplyScalar(0.9 + 1.4 * f); this.lavaRim.setColorAt(ln++, this.flashColor); continue; }
+        this.flashColor.setHex(0xff5a14).multiplyScalar(0.55 + 0.75 * f); this.lavaMesh.setColorAt(ln++, this.flashColor); continue; }
       if (k === 5) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]); // seeker spear: gold edge streak under a cyan-white streak
         this.m.position.set(pr.x[i], 0.78, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.set(1.5, 1, 0.75); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix); this.flashColor.setHex(0xffc84a).multiplyScalar(1.2); this.trailMesh.setColorAt(tn++, this.flashColor);
         this.m.position.y = 0.8; this.m.scale.set(1, 1, 0.7); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix); this.flashColor.setHex(0x8ff0ff).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
@@ -53,7 +53,7 @@ export class ProjectileRenderer {
     this.bladeMesh.count = bn; this.bladeMesh.instanceMatrix.needsUpdate = true; this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
     this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
-    this.lavaRim.count = ln; this.lavaRim.instanceMatrix.needsUpdate = true; if (this.lavaRim.instanceColor) this.lavaRim.instanceColor.needsUpdate = true; this.lavaMesh.count = ln; this.lavaMesh.instanceMatrix.needsUpdate = true; if (this.lavaMesh.instanceColor) this.lavaMesh.instanceColor.needsUpdate = true;
+    this.lavaMesh.count = ln; this.lavaMesh.instanceMatrix.needsUpdate = true; if (this.lavaMesh.instanceColor) this.lavaMesh.instanceColor.needsUpdate = true;
     n = 0; let cn = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
       if (pk.kind[i] === 1) { this.m.position.set(pk.x[i], 0.55 + Math.sin(s.time * 3) * 0.12, pk.z[i]); this.m.rotation.set(0, s.time * 1.5, 0); this.m.scale.setScalar(1.6); this.m.updateMatrix(); if (cn < 64) { this.m.position.y = 0; this.m.rotation.set(0, s.time * 0.8, 0); this.m.scale.set(1, 0.8 + 0.2 * Math.sin(s.time * 3 + i), 1); this.m.updateMatrix(); this.beamMesh.setMatrixAt(cn, this.m.matrix); this.m.position.set(pk.x[i], 0.55 + Math.sin(s.time * 3) * 0.12, pk.z[i]); this.m.rotation.set(0, s.time * 1.5, 0); this.m.scale.setScalar(1.6); this.m.updateMatrix(); } if (cn < 64) this.chestMesh.setMatrixAt(cn++, this.m.matrix); this.m.scale.setScalar(1); continue; }
       this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); if (pk.magnet[i] && (trailTick & 1)) this.vfx.trail(pk.x[i], 0.45, pk.z[i]); }
