@@ -21,6 +21,10 @@ export class Game {
     parent.append(this.canvas, this.ui);
     if (new URLSearchParams(location.search).get('debug') === '1') { this.dbg = document.createElement('pre'); this.dbg.style.cssText = 'position:absolute;left:8px;bottom:8px;margin:0;font:11px monospace;white-space:pre;color:#9fe;background:#0008;padding:4px 6px;pointer-events:none'; this.ui.append(this.dbg); }
     this.input = new KeyboardMouse(this.canvas);
+    // WebGL context loss (mobile backgrounding, GPU reset): stop drawing + sim, show a message, resume when three restores the context.
+    const note = document.createElement('div'); note.textContent = 'Graphics reloading…'; note.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000a;font:600 22px sans-serif;letter-spacing:.1em;color:#ffd9a0;pointer-events:none'; this.ui.append(note);
+    this.canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ctxLost = true; note.style.display = 'flex'; });
+    this.canvas.addEventListener('webglcontextrestored', () => { this.ctxLost = false; this.last = performance.now(); note.style.display = 'none'; dispatchEvent(new Event('resize')); });
     this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui, i => this.choose(i));
     (window as any).__game = this; // QA hook
     this.applySettings(settings);
@@ -94,7 +98,7 @@ export class Game {
     let mx = sx + Math.cos(a) * 0.02 - me.x / r * w, mz = sz + Math.sin(a) * 0.02 - me.z / r * w; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
-  hitstop = 0;
+  hitstop = 0; ctxLost = false;
   /** QA hook: current quality-driven alive cap (min'd with the tuned time curve in waves.ts). */
   get aliveLimit() { return limits.maxAlive; }
   /** QA/perf hook: window.__game.perf = per-stage CPU ms, draw calls, tris. ?debug=1 shows an overlay. */
@@ -105,6 +109,7 @@ export class Game {
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
     const me = this.sim.state.players[0];
     if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
+    if (this.ctxLost) { this.last = now; return; } // GL context gone: nothing to draw, don't advance the sim
     if (this.running && !this.paused) {
       const r = this.renderer; this.acc += dt * (r.slowmo > 0 ? 0.3 : 1); if (r.slowmo > 0) r.slowmo -= dt; // level-up slow-mo (sim stays fixed-step)
       const inp: PlayerInput = this.autoplay ? this.bot(me) : this.input.poll(me, this.renderer.camera);
