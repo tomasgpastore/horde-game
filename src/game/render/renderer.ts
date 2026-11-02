@@ -14,7 +14,7 @@ import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
 /** Render reads SimState only (never mutates). Enemies = ONE InstancedMesh per kind-group for 300+ @60fps.
  *  Engine Engineer owns: camera, lighting, post-fx, particles, instanced pools for projectiles/pickups, per-kind meshes/colors. */
 export class Renderer {
-  three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+  three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
   projMesh: THREE.InstancedMesh; ringMesh: THREE.InstancedMesh; gemMesh: THREE.InstancedMesh; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
   rig = new CameraRig(this.camera); private sun: THREE.DirectionalLight | null = null; private sunOff = new THREE.Vector3(); private noDegrade = new URLSearchParams(location.search).has('nodegrade'); private slowT = 0; private slowN = 0; private q: 'low' | 'med' | 'high' = 'high';
   /** Game.frame reads/decrements this: seconds of slow-mo (sim runs at 0.3x). */ slowmo = 0;
@@ -44,7 +44,7 @@ export class Renderer {
     this.pMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffffff }), Renderer.NP);
     this.pMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Renderer.NP * 3), 3); this.pMesh.frustumCulled = false; this.pMesh.count = 0; this.scene.add(this.pMesh);
     this.composer = new EffectComposer(this.three); this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.55, 0.55)); this.composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null }, amount: { value: 0.55 } },
+    this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9, 0.6, 0.7)); this.composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null }, amount: { value: 0.55 } },
       vertexShader: 'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader: 'uniform sampler2D tDiffuse;uniform float amount;varying vec2 v;void main(){vec4 c=texture2D(tDiffuse,v);float d=distance(v,vec2(.5));c.rgb*=1.-smoothstep(.35,.85,d)*amount;gl_FragColor=c;}' }));
     this.composer.addPass(new OutputPass());
