@@ -26,7 +26,7 @@ EMBERHORDE is a fast, 3D low-poly horde-survivor roguelite. Move, dash, and let 
 
 - **Play in seconds** – any modern browser, nothing to install, no sign-in.
 - **6 weapons** – Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears.
-- **Weapon evolutions** – max out a weapon and own its paired passive, and an EVOLVE card appears on your next level-up to supercharge it.
+- **Weapon evolutions** – max a weapon out (level 8) and own its paired passive, and an EVOLVE card appears on your next level-up: Ember Bolt becomes Solar Lance, Frost Nova becomes Absolute Zero, Chain Lightning becomes Storm Crown, and so on. (Evolve a weapon in a run, not every run.)
 - **Elites and chests** – an elite hunts you every 40 seconds from 0:50; kill it for a chest.
 - **3 biomes, 3 bosses** – fight through Ashen Woods, the Drowned Cathedral and the Void Garden. The Hollow Stag, the Bell-Warden and The Unlit each guard a biome; beat a boss and the run carries on into the next.
 - **10–15 minute runs** – a full run ends in victory after The Unlit.
