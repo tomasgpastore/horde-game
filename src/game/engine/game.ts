@@ -23,8 +23,8 @@ export class Game {
     this.applySettings(settings);
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
   }
-  reset() {
-    const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff);
+  reset(seedOverride?: number) {
+    const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = seedOverride ?? (Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff));
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
   choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
