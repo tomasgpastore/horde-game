@@ -2,24 +2,15 @@ import type { SimState } from '@shared/types';
 import { BOSSES } from '@sim/content/enemies';
 import { upgradeDef } from '@sim/content/upgrades';
 import { iconSvg } from '../art/icons';
-const SVG = (d: string, c: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:${c}">${d}</svg>`;
-const ICONS: Record<string, string> = {
-  ember_bolt: SVG('<path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-7 1-10z" fill="#ff8a3a55"/>', '#ff8a3a'),
-  orbit_blades: SVG('<circle cx="12" cy="12" r="2" fill="#9fe8ff"/><path d="M12 3l2 4h-4zM20 15l-4-1 2-3zM4 15l4-1-2-3z" fill="#9fe8ff88"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/>', '#9fe8ff'),
-  frost_nova: SVG('<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/>', '#7fc8ff'),
-  chain_lightning: SVG('<path d="M13 2L5 14h6l-2 8 9-13h-6z" fill="#ffe85a55"/>', '#ffe85a'),
-  might: SVG('<path d="M12 21V7M6 13l6-6 6 6M7 20h10"/>', '#ff6a5a'),
-  haste: SVG('<path d="M7 3h10M7 21h10M8 3c0 6 8 6 8 9s-8 3-8 9" />', '#ffd35a'),
-  speed: SVG('<path d="M6 7l5 5-5 5M13 7l5 5-5 5"/>', '#8affc1'),
-  magnet: SVG('<path d="M5 3v9a7 7 0 0 0 14 0V3h-4v9a3 3 0 0 1-6 0V3z"/>', '#c9a8ff'),
-  hp: SVG('<path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z" fill="#ff5a7a55"/>', '#ff5a7a'),
-};
-const BASE = { damageMult: 1.15, cooldownMult: 0.9, moveSpeed: 1.1, pickupRadius: 1.35 } as const;
-const BASE0 = { damageMult: 1, cooldownMult: 1, moveSpeed: 6, pickupRadius: 2.5 };
+const BASE = { damageMult: 1.15, cooldownMult: 0.9, moveSpeed: 1.1, pickupRadius: 1.35, area: 1.15 } as const;
+const BASE0 = { damageMult: 1, cooldownMult: 1, moveSpeed: 6, pickupRadius: 2.5, area: 1 };
+/** Icons come from the Artist's set only (art/icons.ts); unknown ids get a letter chip. */
+const icon = (id: string) => iconSvg(id) || `<b style="font:700 15px Rajdhani,system-ui,sans-serif;color:#9fe8ff">${upgradeDef(id)?.name?.[0] ?? '?'}</b>`;
 /** Passive stack counts derived from stats (sim doesn't track a passive list). */
 function passives(st: Record<string, number>, maxHp: number): [string, number][] {
-  const n = (k: keyof typeof BASE, id: string): [string, number] => [id, Math.round(Math.log(st[k] / BASE0[k]) / Math.log(BASE[k]))];
-  return ([n('damageMult', 'might'), n('cooldownMult', 'haste'), n('moveSpeed', 'speed'), n('pickupRadius', 'magnet'), ['hp', Math.round((maxHp - 100) / 25)]] as [string, number][]).filter(x => x[1] > 0);
+  const n = (k: keyof typeof BASE, id: string): [string, number] => [id, Math.round(Math.log((st[k] ?? BASE0[k]) / BASE0[k]) / Math.log(BASE[k]))];
+  return ([n('damageMult', 'might'), n('cooldownMult', 'haste'), n('moveSpeed', 'speed'), n('pickupRadius', 'magnet'), n('area', 'area'),
+    ['armor', Math.round((st.armor ?? 0) / 2)], ['luck', Math.round((st.luck ?? 0) / 0.05)], ['hp', Math.round((maxHp - 100) / 25)]] as [string, number][]).filter(x => x[1] > 0);
 }
 /** HUD + level-up cards. DOM overlay inside the game's own ui div. Gameplay/UI owner extends (lantern style, Rajdhani). */
 export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
@@ -64,8 +55,8 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
       lag = pct >= lag ? pct : Math.max(pct, lag - 0.35); bf.style.width = pct + '%'; bl.style.width = lag + '%'; } else { boss.style.display = 'none'; lag = 100; }
     const ps = passives(p.stats, p.maxHp), gk = p.weapons.map(w => w.id + w.level).join() + '|' + ps.join();
     if (gk !== gearKey) { gearKey = gk;
-      gw.innerHTML = p.weapons.map(w => `<div class="gi" title="${upgradeDef('w:' + w.id)?.name ?? w.id} Lv ${w.level}">${ICONS[w.id] ?? ''}<div class="pips">${Array.from({ length: Math.max(5, w.level) }, (_, i) => `<b class="${i < w.level ? 'on' : ''}"></b>`).join('')}</div></div>`).join('');
-      gp.innerHTML = ps.map(([id, c]) => `<div class="gi p" title="${upgradeDef('p:' + id)?.name ?? id} x${c}">${ICONS[id] ?? ''}${c > 1 ? `<span class="n">${c}</span>` : ''}</div>`).join(''); }
+      gw.innerHTML = p.weapons.map(w => `<div class="gi" title="${upgradeDef('w:' + w.id)?.name ?? w.id} Lv ${w.level}">${icon('w:' + w.id)}<div class="pips">${Array.from({ length: Math.max(5, w.level) }, (_, i) => `<b class="${i < w.level ? 'on' : ''}"></b>`).join('')}</div></div>`).join('');
+      gp.innerHTML = ps.map(([id, c]) => `<div class="gi p" title="${upgradeDef('p:' + id)?.name ?? id} x${c}">${icon('p:' + id)}${c > 1 ? `<span class="n">${c}</span>` : ''}</div>`).join(''); }
     const key = s.phase === 'levelUp' ? s.levelChoices.join() : '';
     if (key !== shown) { shown = key;
       if (!key) cards.style.display = 'none';
