@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { addRim } from './rim';
 import type { EnemyPool } from '@shared/types';
 import { MAX_ENEMIES } from '@shared/types';
 
@@ -81,7 +82,7 @@ export class EnemyRenderer {
   private counts = new Int32Array(LOOKS.length);
   constructor(scene: THREE.Scene) {
     LOOKS.forEach((l, k) => {
-      const bm = new THREE.InstancedMesh(build(l.parts), new THREE.MeshLambertMaterial({ color: l.body, flatShading: true, emissive: l.glow, emissiveIntensity: 0.07 }), MAX_ENEMIES);
+      const bm = new THREE.InstancedMesh(build(l.parts), addRim(new THREE.MeshLambertMaterial({ color: l.body, flatShading: true, emissive: l.glow, emissiveIntensity: 0.07 }), l.glow, 0.8), MAX_ENEMIES);
       const gm = new THREE.InstancedMesh(build(l.glowParts), new THREE.MeshBasicMaterial({ color: new THREE.Color(l.glow).multiplyScalar(1.7), toneMapped: false }), MAX_ENEMIES);
       bm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_ENEMIES * 3).fill(1), 3);
       for (const x of [bm, gm]) { x.frustumCulled = false; x.count = 0; scene.add(x); }
