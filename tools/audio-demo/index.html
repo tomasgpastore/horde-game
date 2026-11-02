@@ -1,0 +1,23 @@
+<!doctype html><meta charset=utf-8><title>EMBERHORDE audio demo</title>
+<style>body{background:#120a08;color:#ffb070;font:14px monospace;padding:20px;max-width:900px}button{background:#2a1710;color:#ffb070;border:1px solid #6a3519;padding:6px 10px;margin:3px;cursor:pointer}button:hover{background:#4a2512}h3{color:#ff7a2a}label{display:block;margin:6px 0}input[type=range]{width:300px;vertical-align:middle}</style>
+<h2>EMBERHORDE audio</h2><p>Run: <code>npx vite</code> then open /tools/audio-demo/ . Click anything to unlock audio.</p>
+<h3>Volume</h3><div id=vols></div>
+<h3>Music</h3><button data-m=title>title</button><button data-m=battle>battle (crossfades on bar)</button><button data-m=boss>boss</button><button data-m="">stop</button>
+<label>intensity <input id=int type=range min=0 max=1 step=.01 value=.3> <span id=iv>0.30</span></label>
+<button id=auto>auto-ramp intensity (30s)</button> <button id=cards>toggle card-screen filter</button> <button id=duck>boss telegraph duck</button>
+<label>low-HP heartbeat <input id=hb type=range min=0 max=1 step=.01 value=0></label>
+<h3>SFX</h3><div id=sfxs></div>
+<h3>Stress</h3><button id=stress>300 kills/s horde for 3s (through Audio.consume)</button> <span id=st></span>
+<script type=module>
+import {audio,sfx,music,Audio} from '/src/game/audio/index.ts';
+const game=new Audio(); window.A={audio,sfx,music,game};
+const $=s=>document.querySelector(s);
+for(const ch of['master','music','sfx']){const l=document.createElement('label');l.innerHTML=ch+' <input type=range min=0 max=1 step=.01 value='+audio.vol[ch]+'>';l.firstElementChild.oninput=e=>audio.setVolume(ch,+e.target.value);$('#vols').append(l)}
+document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{audio.init();music.play(b.dataset.m||null)});
+$('#int').oninput=e=>{music.setIntensity(+e.target.value);$('#iv').textContent=(+e.target.value).toFixed(2)};
+$('#auto').onclick=()=>{audio.init();const t0=performance.now();const f=()=>{const v=Math.min(1,(performance.now()-t0)/30000);music.setIntensity(v);$('#int').value=v;$('#iv').textContent=v.toFixed(2);if(v<1)requestAnimationFrame(f)};f()};
+$('#cards').onclick=()=>music.setPaused(!music.paused);$('#duck').onclick=()=>{audio.init();sfx.play('boss_telegraph');music.duck(-6,.6)};
+$('#hb').oninput=e=>music.setHeartbeat(+e.target.value);
+for(const n of['hit','kill','crunch','gem','levelup','evolve','hurt','death','fire_bolt','fire_orb','fire_nova','fire_arrow','fire_lightning','fire_flame','freeze','boss_telegraph','boss_slam','boss_roar','ui_click','ui_hover','ui_card','ui_back','chest','dash']){const b=document.createElement('button');b.textContent=n;b.onclick=()=>{audio.init();sfx.play(n,{count:12})};$('#sfxs').append(b)}
+$('#stress').onclick=()=>{audio.init();let k=0;const iv=setInterval(()=>{const e=[];for(let i=0;i<5;i++)e.push({t:'kill',x:0,z:0,enemyKind:i});for(let i=0;i<8;i++)e.push({t:'hit',x:0,z:0,dmg:1,crit:i==0,enemyKind:0});e.push({t:'shoot',weapon:'bolt',x:0,z:0,owner:0});game.consume(e);if(++k>=180){clearInterval(iv);$('#st').textContent='done'}},1000/60)};
+</script>
