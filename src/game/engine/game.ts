@@ -4,6 +4,8 @@ import { Indicators } from '@render/indicators';
 import { Renderer } from '@render/renderer';
 import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
+import { applyUpgrade } from '@sim/content/upgrades';
+import { WEAPONS } from '@sim/content/weapons';
 import { ARENA_BOSS } from '@world/waves';
 import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
@@ -58,7 +60,7 @@ export class Game {
     d.innerHTML = `<div style="font-size:20px;letter-spacing:.5em;color:#9fe8ff">Entering</div>${name}<div style="font-size:18px;letter-spacing:.4em;color:#ffc857;margin-top:6px">${sub}</div>`;
     this.ui.appendChild(d); requestAnimationFrame(() => { d.style.opacity = '1'; }); setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 700); }, 2800);
   }
-  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.fastForward(Number(new URLSearchParams(location.search).get('t')) || 0); this.last = performance.now(); audio.resume(); this.audio.startRun(); }
+  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.fastForward(Number(new URLSearchParams(location.search).get('t')) || 0); this.debugGive(); this.last = performance.now(); audio.resume(); this.audio.startRun(); }
   /** Debug hook ?t=N: simulate N seconds instantly with the bot (invulnerable, auto-picks cards) so trailer/OG shots can show mid/late-game density (?t=300 = boss). */
   fastForward(seconds: number) {
     if (seconds <= 0) return; const s = this.sim.state, p = s.players[0]; let guard = 0;
@@ -108,6 +110,14 @@ export class Game {
   }
   /** Autoplay/fast-forward card rule: evolution > new weapon > Vitality/Armor > anything (builds that can actually kill bosses). */
   botPick(): number { const ch = this.sim.state.levelChoices, pri = (id: string) => id.startsWith('e:') ? 0 : id.startsWith('w:') ? 1 : id === 'p:hp' || id === 'p:armor' ? 2 : 3; let b = 0; ch.forEach((id, i) => { if (pri(id) < pri(ch[b])) b = i; }); return b; }
+  /** Debug/QA hooks: ?give=ember_bolt:8,might:1 (weapon:level | passive:stacks) grants a build at start; ?reward=1 opens a level-up (evolution if eligible) on the first tick. */
+  debugGive() {
+    const q = new URLSearchParams(location.search), g = q.get('give'), s = this.sim.state, p = s.players[0];
+    if (g) for (const part of g.split(',')) { const [name, n] = part.split(':'), k = Math.max(1, Math.min(12, Number(n) || 1));
+      if (WEAPONS[name]) { const w = p.weapons.find(w => w.id === name); if (w) w.level = k; else p.weapons.push({ id: name, level: k, cooldown: 0 }); }
+      else for (let i = 0; i < k; i++) applyUpgrade(p, 'p:' + name); }
+    if (q.get('reward') === '1') p.xp = p.xpToNext;
+  }
   hitstop = 0; ctxLost = false;
   /** QA hook: current quality-driven alive cap (min'd with the tuned time curve in waves.ts). */
   get aliveLimit() { return limits.maxAlive; }

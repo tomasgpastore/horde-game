@@ -124,7 +124,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
 };
 
-/** Evolutions: require weapon level 6 + owning the paired passive (any level ≥1). Granted by BOSS CHEST (min 5/10/15 bosses) — chest opens evolve screen. */
+/** Evolutions (AS SHIPPED, see sim/content/upgrades.ts EVOLUTIONS): weapon at MAX level 8 + owning its paired passive (≥1 stack) => an 'EVOLVE' card leads the next level-up offer; picking it adds +4 levels. NOT tied to boss chests (a boss kill gives a normal level-up card; chests = a free level-up). This table is design reference only. */
 export const EVOLUTIONS: Record<string, { name: string; base: string; passive: PassiveId; desc: string; dmgMult: number; cdMult: number; countAdd: number; radiusMult: number; special: string }> = {
   sunfire_barrage: { name: 'Sunfire Barrage', base: 'ember_bolt',      passive: 'might',     desc: 'Bolts become exploding suns; fires a 360° ring every 4th volley.', dmgMult: 1.6, cdMult: 0.8, countAdd: 2, radiusMult: 1.5, special: 'explode r=2.5 for 60% dmg; ring of 12 every 4th volley; pierce=infinite' },
   bladestorm_halo: { name: 'Bladestorm Halo', base: 'orbit_blades',    passive: 'swiftness', desc: 'Two counter-rotating rings, permanent; blades fly out at enemies.', dmgMult: 1.5, cdMult: 0.0, countAdd: 4, radiusMult: 1.3, special: 'no downtime; second ring r=5 reverse; every 5s launch 4 blades outward' },
@@ -253,7 +253,7 @@ export const CARD_RULES = {
   luckRarityBonus: 'rare & epic weights multiplied by (1 + 2*luck)',
   // Bonus "gold cards" appear 1 per 8 level-ups: +50 gold or heal full — free choice slot, no pick cost
   rerollsFromLuck: 'every +0.25 luck grants +1 reroll',
-  evolutionCard: 'Evolution only via boss chest (guaranteed on boss kill if requirement met); otherwise chest gives 3 free upgrades',
+  evolutionCard: '(shipped rule) evolution card appears in ANY level-up once weapon is level 8 + paired passive owned; chests/boss kills just grant a level-up',
 };
 
 // ───────────────────────── BOSSES ─────────────────────────
