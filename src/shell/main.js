@@ -37,7 +37,7 @@ const screens = {
     <label>Quality<select data-k="quality"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label>
     <label>Screen shake<input type="checkbox" data-k="shake"></label>
     <button class="btn" data-a="back">Back</button></div>`),
-  credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Assets: see in-repo CREDITS.md.</p><button class="btn" data-a="back">Back</button></div>`),
+  credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Font: Rajdhani by Indian Type Foundry (SIL OFL 1.1).<br>All music &amp; sound effects are synthesized in-game.<br>Full licenses: CREDITS.md in the repo.</p><button class="btn" data-a="back">Back</button></div>`),
   pause: mk('hidden clear', `<h2>Paused</h2><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="psettings">Settings</button><button class="btn" data-a="quit">Quit to menu</button>`),
   over: mk('hidden clear', `<h1 style="font-size:64px">You fell</h1><p class="tag" id="score"></p><button class="btn primary" data-a="play">Try again</button><button class="btn" data-a="quit">Menu</button>`),
   nogl: mk('hidden', `<h1>EMBERHORDE</h1><p class="err">Your browser can't run WebGL, which this game needs. Try a recent Chrome, Firefox, Edge or Safari, and make sure hardware acceleration is enabled.</p>`),
