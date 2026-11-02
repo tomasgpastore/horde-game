@@ -83,3 +83,6 @@ export class Audio {
     }
   }
 }
+
+// QA hook (tests/audio.spec.ts): inspect engine state from Playwright.
+if (typeof window !== 'undefined') (window as any).__audio = { audio, sfx, music };
