@@ -2,8 +2,11 @@ import { xpToNext } from '../content/balance';
 import type { System } from '../system';
 import { rollChoices } from '../content/upgrades';
 /** Pickup magnet/collect + XP → level-up. Also called by Sim.choose() to chain level-ups. */
+export const GEM_VACUUM = 450;
 export const pickupSystem: System = { name: 'pickups', update(s, c) {
   const pk = s.pickups, p = s.players[0];
+  // gem vacuum: when too many gems pile up (perf + clutter), every gem starts flying to the hero (bounded pool growth)
+  if (s.tick % 60 === 0) { let alive = 0; for (let i = 0; i < pk.count; i++) alive += pk.alive[i]; if (alive > GEM_VACUUM) for (let i = 0; i < pk.count; i++) if (pk.alive[i] && pk.kind[i] === 0) pk.magnet[i] = 1; }
   if (!p.dead) for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
     const dx = p.x - pk.x[i], dz = p.z - pk.z[i], d = Math.hypot(dx, dz);
     if (!pk.magnet[i] && d < p.stats.pickupRadius * (pk.kind[i] === 1 ? 3 : 1)) pk.magnet[i] = 1;
