@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { SimState, SimEvent, ArenaDef, ArenaHandle } from '@shared/types';
+import { OccluderFader } from './occluders';
 import { createHero } from './hero';
 import { CameraRig } from './camera';
 import { EnemyRenderer, KIND_COLORS } from './enemies';
@@ -24,7 +25,7 @@ export class Renderer {
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
   setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
-  tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
+  occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
@@ -33,6 +34,7 @@ export class Renderer {
     this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene);
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
+    this.occ = new OccluderFader(this.scene);
     this.enemies = new EnemyRenderer(this.scene); this.dmg = new DamageNumbers(canvas.parentElement ?? document.body);
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
     this.projMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.46), emissive(0xffffff), MAX_PROJECTILES);
@@ -86,6 +88,7 @@ export class Renderer {
         this.pMesh.setMatrixAt(n, this.m.matrix); this.flashColor.setHex(this.pcol[i]).multiplyScalar(2.4); this.pMesh.setColorAt(n, this.flashColor); n++; }
       this.m.scale.setScalar(1); this.pMesh.count = n; this.pMesh.instanceMatrix.needsUpdate = true; if (this.pMesh.instanceColor) this.pMesh.instanceColor.needsUpdate = true; }
     this.trailTick++; this.vfx.update(dt);
+    this.occ.update(dt, p.x, p.z);
     const b = s.boss; this.tele.visible = !!b && b.mode === 1;
     if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(s.time * 18)); }
     this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0;
