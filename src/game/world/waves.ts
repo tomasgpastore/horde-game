@@ -44,7 +44,7 @@ export function waveFor(wave: number): WaveDef {
   };
 }
 /** Alive-enemy target over time (s -> cap): fairer early curve (~50 @0:30, ~85 @1:00) + Designer's late scaling (150 @5:00, 280 @10:00, 420 @15:00; see content/balance.ts SPAWN_SEGMENTS). */
-const CAP_POINTS: [number, number][] = [[0, 40], [40, 50], [80, 100], [120, 170], [160, 205], [200, 215], [300, 215], [480, 290], [600, 320], [900, 400]];
+const CAP_POINTS: [number, number][] = [[0, 40], [40, 50], [80, 100], [120, 170], [160, 185], [200, 190], [300, 190], [480, 290], [600, 320], [900, 400]];
 export function capAt(t: number): number {
   if (t <= 0) return CAP_POINTS[0][1];
   for (let i = 1; i < CAP_POINTS.length; i++) if (t <= CAP_POINTS[i][0]) { const [t0, c0] = CAP_POINTS[i - 1], [t1, c1] = CAP_POINTS[i]; return Math.round(c0 + (c1 - c0) * (t - t0) / (t1 - t0)); }
