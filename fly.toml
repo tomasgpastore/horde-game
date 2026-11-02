@@ -1,4 +1,4 @@
-app = 'emberhorde'
+app = 'horde-game-live'
 primary_region = 'iad'
 
 [build]
