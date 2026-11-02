@@ -80,3 +80,10 @@ body.in-menu #game>div{display:none!important} /* game HUD overlay (#game's ui d
 .rgear{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;min-height:20px}
 .rw{display:flex;flex-direction:column;align-items:center;font-size:13px;opacity:.9}.rw svg{width:52px;height:52px}
 .rbtns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+/* results backdrop (Artist): dark vignette + drifting embers behind the card */
+.screen:has(.results){background:radial-gradient(ellipse at center,rgba(10,6,14,.55) 25%,rgba(4,2,8,.9) 100%)}
+.screen:has(.results)::before{content:'';position:absolute;inset:-20% 0 0;pointer-events:none;opacity:.7;
+  background-image:radial-gradient(circle,#ff9a4a 0 1.6px,transparent 2.4px),radial-gradient(circle,#ff6a2b 0 1.2px,transparent 2px),radial-gradient(circle,#ffd35a 0 1px,transparent 1.8px);
+  background-size:170px 230px,260px 310px,330px 190px;background-position:0 0,60px 90px,120px 30px;animation:emberfall 14s linear infinite}
+@keyframes emberfall{to{background-position:30px 460px,0px 620px,90px 380px}}
+@media (prefers-reduced-motion:reduce){.screen:has(.results)::before{animation:none}}
