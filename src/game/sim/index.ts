@@ -6,6 +6,7 @@ import { playerSystem } from './systems/player';
 import { enemySystem } from './systems/enemies';
 import { spawner } from './systems/spawner';
 import { arenaCollision } from './systems/arenaCollision';
+import { bossSystem } from './systems/boss';
 import { gridSystem } from './systems/grid';
 import { weaponSystem } from './systems/weapons';
 import { projectileSystem } from './systems/projectiles';
@@ -21,12 +22,12 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
     events: [], phase: 'running', wave: 0, kills: 0, gold: 0, levelChoices: [],
-    spawner: { budget: 0, nextSurge: 20, lastWave: 0, boss: false } };
+    boss: null, spawner: { budget: 0, nextSurge: 20, lastWave: 0, boss: false } };
 }
 
 /** Deterministic fixed-step simulation. Same (seed, input stream) => same state. Runs in browser now, Node server later. */
 export class Sim {
-  rng: Rng; systems: System[] = [spawner, playerSystem, gridSystem, weaponSystem, projectileSystem, enemySystem, arenaCollision, pickupSystem];
+  rng: Rng; systems: System[] = [spawner, playerSystem, gridSystem, weaponSystem, projectileSystem, enemySystem, bossSystem, arenaCollision, pickupSystem];
   constructor(public state: SimState, public arena: ArenaDef) { this.rng = new Rng(state.seed); }
   register(sys: System, before?: string) {
     const i = before ? this.systems.findIndex(s => s.name === before) : -1;

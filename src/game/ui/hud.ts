@@ -1,4 +1,5 @@
 import type { SimState } from '@shared/types';
+import { BOSSES } from '@sim/content/enemies';
 import { upgradeDef } from '@sim/content/upgrades';
 /** HUD + level-up cards. DOM overlay inside the game's own ui div. Gameplay/UI owner extends (lantern style, Rajdhani). */
 export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
@@ -14,7 +15,9 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   top.innerHTML = '<div class="bar"><i style="background:#e0453a"></i></div><span id="h-lv"></span><span id="h-info"></span>';
   const xp = document.createElement('div'); xp.className = 'xpbar'; xp.innerHTML = '<i></i>';
   const cards = document.createElement('div'); cards.className = 'cards';
-  root.append(css, top, xp, cards);
+  const boss = document.createElement('div'); boss.style.cssText = 'position:absolute;left:50%;top:48px;transform:translateX(-50%);width:min(560px,70vw);display:none;text-align:center;font:700 20px Rajdhani,system-ui,sans-serif;color:#ff6a5a;text-shadow:0 0 8px #000';
+  boss.innerHTML = '<div id="bn"></div><div style="height:14px;background:#0009;border:1px solid #ff6a5a88;border-radius:7px;overflow:hidden"><i id="bf" style="display:block;height:100%;width:100%;background:linear-gradient(90deg,#8a1010,#ff3a2a)"></i></div>';
+  root.append(css, top, xp, cards, boss); const bn = boss.querySelector('#bn') as HTMLElement, bf = boss.querySelector('#bf') as HTMLElement;
   const hp = top.querySelector('.bar i') as HTMLElement, lv = top.querySelector('#h-lv')!, info = top.querySelector('#h-info')!, xpi = xp.firstChild as HTMLElement;
   let shown = '';
   const pick = (i: number) => onChoose(i);
@@ -23,6 +26,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
     const p = s.players[0];
     hp.style.width = Math.max(0, p.hp / p.maxHp * 100) + '%'; xpi.style.width = Math.min(100, p.xp / p.xpToNext * 100) + '%';
     lv.textContent = `LV ${p.level}`; info.textContent = `${Math.floor(s.time / 60)}:${String(Math.floor(s.time % 60)).padStart(2, '0')}   ☠ ${s.kills}   ${fps.toFixed(0)}fps`;
+    if (s.boss) { boss.style.display = 'block'; bn.textContent = BOSSES[s.boss.id]?.name ?? 'Boss'; bf.style.width = Math.max(0, s.enemies.hp[s.boss.idx] / s.boss.maxHp * 100) + '%'; } else boss.style.display = 'none';
     const key = s.phase === 'levelUp' ? s.levelChoices.join() : '';
     if (key !== shown) { shown = key;
       if (!key) cards.style.display = 'none';
