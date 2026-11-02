@@ -11,6 +11,9 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'p:haste', name: 'Haste', desc: '-10% weapon cooldown' },
   { id: 'p:speed', name: 'Swiftness', desc: '+10% move speed' },
   { id: 'p:magnet', name: 'Magnet', desc: '+35% pickup radius' },
+  { id: 'p:armor', name: 'Armor', desc: '-2 damage taken from every hit' },
+  { id: 'p:area', name: 'Reach', desc: '+15% area: blades, nova' },
+  { id: 'p:luck', name: 'Fortune', desc: '+5% crit chance' },
   { id: 'p:hp', name: 'Vitality', desc: '+25 max HP and heal 25' },
 ];
 export const upgradeDef = (id: string) => UPGRADES.find(u => u.id === id)!;
@@ -31,6 +34,9 @@ export function applyUpgrade(p: PlayerState, id: string) {
     case 'p:haste': st.cooldownMult *= 0.9; break;
     case 'p:speed': st.moveSpeed *= 1.1; break;
     case 'p:magnet': st.pickupRadius *= 1.35; break;
+    case 'p:armor': st.armor = (st.armor ?? 0) + 2; break;
+    case 'p:area': st.area *= 1.15; break;
+    case 'p:luck': st.luck = (st.luck ?? 0) + 0.05; break;
     case 'p:hp': p.maxHp += 25; p.hp = Math.min(p.maxHp, p.hp + 25); break;
   }
 }

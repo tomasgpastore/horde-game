@@ -5,7 +5,7 @@ export class CameraRig {
   cam: THREE.PerspectiveCamera;
   private tx = 0; private tz = 0; private lx = 0; private lz = 0;
   trauma = 0; shakeScale = 1; private t = 0; private inited = false;
-  height = 21; back = 13; private zoom = 1;
+  height = 20; back = 14; private zoom = 1;
   constructor(cam: THREE.PerspectiveCamera) { this.cam = cam; }
   addTrauma(a: number) { this.trauma = Math.min(1, this.trauma + a); }
   snap() { this.inited = false; }
