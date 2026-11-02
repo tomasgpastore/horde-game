@@ -83,3 +83,27 @@ jobs:
           name: playwright-slow-${{ matrix.shard }}
           path: test-results
           retention-days: 14
+
+  report:
+    # Keeps ONE open issue "Slow CI failing on main" (created or commented on, never duplicated).
+    needs: slow
+    if: ${{ always() && needs.slow.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Open or update the issue
+        run: |
+          TITLE='Slow CI failing on main'
+          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="Slow-spec shards failed (event: ${{ github.event_name }}, commit ${GITHUB_SHA::7}).\n\nRun: $RUN\n\nSee the per-shard artifacts (playwright-slow-N) for traces/videos."
+          N=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title -q "[.[]|select(.title==\"$TITLE\")][0].number")
+          if [ -n "$N" ] && [ "$N" != null ]; then
+            gh issue comment "$N" --body "$(printf "$BODY")"
+          else
+            gh issue create --title "$TITLE" --label sev2 --label area:web --body "$(printf "$BODY")"
+          fi
