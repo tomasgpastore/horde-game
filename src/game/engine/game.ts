@@ -69,7 +69,7 @@ export class Game {
       if (si.touch || m.x || m.y) this.autoAim(me, inp); // no mouse on touch/gamepad: aim at nearest enemy
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
-        this.audio.consume(this.sim.state.events); this.renderer.consumeEvents(this.sim.state.events);
+        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
     }

@@ -13,27 +13,36 @@ export type SfxName =
   | 'hit' | 'kill' | 'gem' | 'levelup' | 'hurt' | 'death'
   | 'fire_bolt' | 'fire_whip' | 'fire_orb' | 'fire_nova' | 'fire_arrow' | 'fire_lightning' | 'fire_flame'
   | 'boss_telegraph' | 'boss_slam' | 'boss_roar'
-  | 'ui_click' | 'ui_hover' | 'ui_card' | 'ui_back' | 'chest' | 'dash';
+  | 'ui_click' | 'ui_hover' | 'ui_card' | 'ui_back' | 'chest' | 'dash'
+  | 'crunch' | 'freeze' | 'evolve' | 'heartbeat';
 
-export interface PlayOpts { pitch?: number; volume?: number; pan?: number; }
+export interface PlayOpts { pitch?: number; volume?: number; pan?: number; /** batch size for crunch */ count?: number; }
 export type MusicName = 'title' | 'battle' | 'boss';
 
 const mtof = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+const PAUSE_GAIN = 0.7; // ~ -3dB while card screen is open
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (e0: number, e1: number, x: number) => { const t = clamp((x - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
 
 // name -> [max concurrent voices, min ms between plays, priority (higher survives global cap)]
 const LIMITS: Record<SfxName, [number, number, number]> = {
-  hit: [6, 35, 1], kill: [5, 30, 1], gem: [4, 40, 1], levelup: [1, 300, 5], hurt: [2, 120, 4], death: [1, 500, 6],
+  hit: [6, 20, 1], kill: [5, 20, 1], gem: [4, 40, 1], levelup: [1, 300, 5], hurt: [2, 120, 4], death: [1, 500, 6],
   fire_bolt: [4, 45, 1], fire_whip: [2, 100, 1], fire_orb: [2, 120, 1], fire_nova: [2, 120, 2], fire_arrow: [4, 45, 1],
   fire_lightning: [3, 80, 2], fire_flame: [2, 90, 1],
   boss_telegraph: [1, 400, 5], boss_slam: [2, 200, 6], boss_roar: [1, 500, 5],
   ui_click: [3, 30, 3], ui_hover: [2, 40, 2], ui_card: [2, 100, 3], ui_back: [2, 60, 3], chest: [1, 300, 4], dash: [2, 120, 2],
+  crunch: [3, 25, 2], freeze: [2, 70, 2], evolve: [1, 800, 7], heartbeat: [2, 200, 4],
 };
+/** Per-sound output trim (linear), calibrated by tools/audio-demo/verify.mjs so peaks land at the target level. */
+export const SFX_TRIM: Partial<Record<SfxName, number>> = {"hit":6.837,"kill":2.801,"gem":3.993,"levelup":1.008,"hurt":3.681,"death":0.638,"fire_bolt":7.635,"fire_whip":0.465,"fire_orb":2.219,"fire_nova":1.7,"fire_arrow":7.494,"fire_lightning":0.597,"fire_flame":2.969,"boss_telegraph":1.975,"boss_slam":1.058,"boss_roar":2.407,"ui_click":6.97,"ui_hover":11.23,"ui_card":1.323,"ui_back":11.055,"chest":1.481,"dash":4.195,"crunch":2.943,"freeze":5.213,"evolve":1.015,"heartbeat":2.722};
+/** Per-theme music trim, calibrated so loop RMS ~ -20 dBFS at default sliders. */
+export const MUSIC_TRIM: Record<string, number> = { title: 1.527, battle: 0.838, boss: 0.646 };
 const MAX_VOICES = 36;
 
 class AudioEngine {
   ctx: AudioContext | null = null;
+  offline = false;
+  musicDuck!: GainNode; musicLpf!: BiquadFilterNode;
   master!: GainNode; musicBus!: GainNode; sfxBus!: GainNode; comp!: DynamicsCompressorNode;
   noiseBuf!: AudioBuffer;
   vol = { master: 0.8, music: 0.6, sfx: 0.9 };
@@ -41,26 +50,30 @@ class AudioEngine {
   private pendingMusic: { name: MusicName | null } | null = null;
   private unlockHooked = false;
 
-  get ready() { return !!this.ctx && this.ctx.state === 'running'; }
+  get ready() { return !!this.ctx && (this.offline || this.ctx.state === 'running'); }
+  /** Test hook: drop the current context so init(ext) can bind a fresh (Offline)AudioContext. */
+  reset() { music.dispose(); sfx.reset(); this.ctx = null; this.offline = false; }
 
   /** Create context (must run in a user gesture to be audible). Safe to call repeatedly. */
-  init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') void this.ctx.resume(); return; }
+  init(ext?: BaseAudioContext) {
+    if (this.ctx && !ext) { if (this.ctx.state === 'suspended') void this.ctx.resume(); return; }
     const AC = window.AudioContext || (window as any).webkitAudioContext;
-    const ctx = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    const ctx = (this.ctx = (ext ?? new AC({ latencyHint: 'interactive' })) as AudioContext);
+    this.offline = !!ext;
     this.comp = ctx.createDynamicsCompressor();
     this.comp.threshold.value = -16; this.comp.knee.value = 14; this.comp.ratio.value = 6;
     this.comp.attack.value = 0.004; this.comp.release.value = 0.2;
     const limiter = ctx.createDynamicsCompressor(); // brickwall-ish safety
     limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.05;
     this.master = ctx.createGain(); this.musicBus = ctx.createGain(); this.sfxBus = ctx.createGain();
-    this.musicBus.connect(this.comp); this.sfxBus.connect(this.comp);
+    this.musicDuck = ctx.createGain(); this.musicLpf = ctx.createBiquadFilter(); this.musicLpf.type = 'lowpass'; this.musicLpf.frequency.value = 20000; this.musicLpf.Q.value = 0.5;
+    this.musicBus.connect(this.musicDuck); this.musicDuck.connect(this.musicLpf); this.musicLpf.connect(this.comp); this.sfxBus.connect(this.comp);
     this.comp.connect(this.master); this.master.connect(limiter); limiter.connect(ctx.destination);
     this.applyVolumes();
     const len = ctx.sampleRate * 2; this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     music.attach(this);
-    void ctx.resume();
+    if (!ext) void ctx.resume();
     if (this.pendingMusic) { music.play(this.pendingMusic.name); this.pendingMusic = null; }
   }
 
@@ -76,7 +89,7 @@ class AudioEngine {
   private applyVolumes() {
     if (!this.ctx) return; const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.muted ? 0 : this.vol.master, t, 0.03);
-    this.musicBus.gain.setTargetAtTime(this.vol.music * 0.7, t, 0.03);
+    this.musicBus.gain.setTargetAtTime(this.vol.music, t, 0.03);
     this.sfxBus.gain.setTargetAtTime(this.vol.sfx, t, 0.03);
   }
   queueMusic(name: MusicName | null) { this.pendingMusic = { name }; }
@@ -97,7 +110,7 @@ class Sfx {
   dropped = 0;
 
   play(name: SfxName, o: PlayOpts = {}) {
-    const ctx = audio.ctx; if (!ctx || ctx.state !== 'running') return;
+    const ctx = audio.ctx; if (!ctx || !audio.ready) return;
     const [cap, gap, prio] = LIMITS[name];
     const now = ctx.currentTime;
     this.voices = this.voices.filter(v => v.end > now);
@@ -125,20 +138,21 @@ class Sfx {
       const s = this.gemStreak++; const semis = PENT[s % 5] + 12 * Math.min(2, Math.floor(s / 5));
       pitch = (o.pitch ?? 1) * Math.pow(2, semis / 12);
     }
-    const ctxx = { ctx, out, nodes, t: now, pitch, vol };
+    const ctxx = { ctx, out, nodes, t: now, pitch, vol, count: o.count ?? 1 };
     const dur = SYN[name](ctxx);
-    out.gain.value = 1;
+    out.gain.value = SFX_TRIM[name] ?? 1;
     const end = now + dur + 0.1;
     const kill = () => { try { out.gain.cancelScheduledValues(0); out.gain.setTargetAtTime(0, ctx.currentTime, 0.01); nodes.forEach(n => { try { n.stop(ctx.currentTime + 0.05); } catch { /* */ } }); } catch { /* */ } };
     this.voices.push({ name, prio, end, kill });
     const last = nodes[nodes.length - 1]; if (last) last.onended = () => { try { node.disconnect(); } catch { /* */ } };
   }
+  reset() { this.voices = []; this.last = {}; this.gemStreak = 0; this.dropped = 0; }
   /** Reset gem streak (e.g. after a pause). */
   resetStreak() { this.gemStreak = 0; }
 }
 export const sfx = new Sfx();
 
-interface SC { ctx: AudioContext; out: GainNode; nodes: AudioScheduledSourceNode[]; t: number; pitch: number; vol: number; }
+interface SC { ctx: AudioContext; out: GainNode; nodes: AudioScheduledSourceNode[]; t: number; pitch: number; vol: number; count: number; }
 
 function osc(c: SC, type: OscillatorType, f0: number, f1: number, dur: number, g: number, delay = 0, curve: 'exp' | 'lin' = 'exp', dest?: AudioNode) {
   const o = c.ctx.createOscillator(), a = c.ctx.createGain(); const t = c.t + delay;
@@ -206,6 +220,20 @@ const SYN: Record<SfxName, (c: SC) => number> = {
     osc(c, 'sine', 100, 50, 0.2, 0.35); [0, 4, 7, 11, 12].forEach((s, i) => osc(c, 'triangle', mtof(72 + s), mtof(72 + s), 0.4, 0.14, 0.1 + i * 0.06));
     noise(c, 'highpass', 6000, 9000, 0.3, 0.1, 0.1); return 0.8;
   },
+  crunch(c) {
+    // batched kills: heavier with count (1..~30)
+    const n = Math.min(30, c.count), k = Math.log2(1 + n) / Math.log2(31);
+    noise(c, 'lowpass', 2500 + k * 2000, 300, 0.1 + k * 0.14, 0.3 + k * 0.4, 0, 0.8, 0.004);
+    osc(c, 'sine', 140 - k * 40, 40, 0.14 + k * 0.16, 0.25 + k * 0.45); osc(c, 'triangle', 480 * (1 - k * 0.3), 120, 0.1, 0.18);
+    noise(c, 'highpass', 4000, 7000, 0.07, 0.15 * (1 - k * 0.4)); return 0.3;
+  },
+  freeze(c) { osc(c, 'sine', 2400, 3400, 0.08, 0.1, 0, 'lin'); osc(c, 'triangle', 3200, 2000, 0.1, 0.07, 0.02); noise(c, 'highpass', 8000, 9000, 0.05, 0.08); return 0.14; },
+  evolve(c) {
+    [0, 7, 12, 16, 19, 24].forEach((s, i) => { const f = mtof(57 + s); osc(c, 'sawtooth', f, f, 1.4, 0.1, i * 0.09); osc(c, 'triangle', f * 2, f * 2, 1.2, 0.09, i * 0.09); });
+    osc(c, 'sine', 90, 35, 1.2, 0.6); noise(c, 'bandpass', 200, 6000, 1.1, 0.35, 0, 1.2, 0.5); noise(c, 'highpass', 6000, 9000, 1.2, 0.12, 0.5, 1, 0.1);
+    osc(c, 'square', mtof(81), mtof(81), 1.6, 0.06, 0.55); return 2.1;
+  },
+  heartbeat(c) { osc(c, 'sine', 70, 38, 0.16, 0.9); osc(c, 'sine', 62, 36, 0.2, 0.7, 0.2); noise(c, 'lowpass', 220, 80, 0.12, 0.2); return 0.45; },
   dash(c) { noise(c, 'bandpass', 600, 3000, 0.15, 0.3, 0, 1.2, 0.03); return 0.18; },
 };
 
@@ -230,50 +258,97 @@ class Music {
   private e!: AudioEngine; private ctx!: AudioContext;
   current: MusicName | null = null;
   intensity = 0.3;
-  private bus!: GainNode; private layerG: Record<Layer, GainNode> | null = null;
+  paused = false;
+  private bus: GainNode | null = null; private layerG: Record<Layer, GainNode> | null = null;
   private level: Record<Layer, number> = { pad: 0, pulse: 0, drums: 0, bass: 0, lead: 0 };
-  private step = 0; private nextT = 0; private timer = 0; private delay: GainNode | null = null;
-  private fx!: { rev: ConvolverNode };
+  private step = 0; private nextT = 0; private timer = 0;
+  private pending: { name: MusicName | null } | null = null;
+  private rev!: ConvolverNode;
+  private heart = 0; private nextBeat = 0;
 
   attach(e: AudioEngine) {
+    this.dispose();
     this.e = e; this.ctx = e.ctx!;
     const c = this.ctx;
-    // shared convolver reverb (generated impulse)
     const len = c.sampleRate * 2.2, ir = c.createBuffer(2, len, c.sampleRate);
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-    const rev = c.createConvolver(); rev.buffer = ir; const rg = c.createGain(); rg.gain.value = 0.35; rev.connect(rg); rg.connect(e.musicBus);
-    this.fx = { rev };
+    this.rev = c.createConvolver(); this.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = 0.35; this.rev.connect(rg); rg.connect(e.musicBus);
+    this.current = null; this.bus = null; this.layerG = null; this.pending = null; this.paused = false; this.heart = 0;
+    if (!e.offline) this.timer = window.setInterval(() => this.tick(), 40);
   }
+  dispose() { clearInterval(this.timer); this.timer = 0; }
 
   setIntensity(v: number) { this.intensity = clamp(v); }
 
-  /** Start a theme with a short crossfade. null stops. */
-  play(name: MusicName | null) {
+  /** Duck the music by `db` (negative) for `secs`, e.g. boss telegraph. */
+  duck(db = -6, secs = 0.6) {
+    if (!this.e.ctx) return; const g = this.e.musicDuck.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setTargetAtTime(Math.pow(10, db / 20), t, 0.04); g.setTargetAtTime(this.paused ? PAUSE_GAIN : 1, t + secs, 0.2);
+  }
+  /** While true (card screen open): music is low-passed ~800Hz and slightly ducked. */
+  setPaused(p: boolean) {
+    this.paused = p; if (!this.e.ctx) return; const t = this.ctx.currentTime;
+    this.e.musicLpf.frequency.setTargetAtTime(p ? 800 : 20000, t, p ? 0.08 : 0.25);
+    this.e.musicDuck.gain.cancelScheduledValues(t); this.e.musicDuck.gain.setTargetAtTime(p ? PAUSE_GAIN : 1, t, 0.1);
+  }
+  /** 0..1 low-HP heartbeat layer (0 = off). */
+  setHeartbeat(v: number) { this.heart = clamp(v); }
+
+  /** Switch theme. Crossfades on the next bar boundary when something is already playing (sync=true). */
+  play(name: MusicName | null, sync = true) {
     if (!this.e.ctx) { this.e.queueMusic(name); return; }
-    if (name === this.current) return;
-    const c = this.ctx;
-    // fade out old
-    if (this.bus) { const old = this.bus; old.gain.setTargetAtTime(0, c.currentTime, 0.25); setTimeout(() => { try { old.disconnect(); } catch { /* */ } }, 2000); }
-    clearInterval(this.timer); this.current = name; this.layerG = null;
-    if (!name) return;
-    this.bus = c.createGain(); this.bus.gain.value = 0; this.bus.gain.setTargetAtTime(1, c.currentTime + 0.1, 0.3);
-    this.bus.connect(this.e.musicBus); this.bus.connect(this.fx.rev);
-    this.layerG = {} as Record<Layer, GainNode>;
-    for (const l of LAYERS) { const g = c.createGain(); g.gain.value = 0; g.connect(this.bus); this.layerG[l] = g; this.level[l] = 0; }
-    this.step = 0; this.nextT = c.currentTime + 0.12;
-    this.timer = window.setInterval(() => this.tick(), 40);
+    if (name === this.current && !this.pending) return;
+    if (name === this.current) { this.pending = null; return; }
+    if (this.current && sync && name) { this.pending = { name }; return; }
+    this.pending = null; this.swap(name, this.ctx.currentTime + 0.05, 0.25);
   }
 
-  private tick() {
-    const c = this.ctx; if (!this.current || !this.layerG) return;
-    const th = THEMES[this.current], w = WINDOW[this.current];
-    // update layer levels
+  private swap(name: MusicName | null, t: number, fade: number) {
+    const c = this.ctx;
+    if (this.bus) { const old = this.bus; old.gain.setTargetAtTime(0, t, fade * 0.6); setTimeout(() => { try { old.disconnect(); } catch { /* */ } }, (t - c.currentTime + 3) * 1000); }
+    this.current = name; this.layerG = null; this.bus = null;
+    if (!name) return;
+    this.bus = c.createGain(); this.bus.gain.setValueAtTime(0.0001, t); this.bus.gain.linearRampToValueAtTime(MUSIC_TRIM[name] ?? 1, t + 0.04);
+    this.bus.connect(this.e.musicBus); this.bus.connect(this.rev);
+    this.layerG = {} as Record<Layer, GainNode>;
+    for (const l of LAYERS) { const g = c.createGain(); g.gain.value = 0; g.connect(this.bus); this.layerG[l] = g; this.level[l] = 0; }
+    this.step = 0; this.nextT = t;
+    this.updateLevels(true);
+  }
+
+  private updateLevels(snap = false) {
+    if (!this.current || !this.layerG) return; const w = WINDOW[this.current], c = this.ctx;
     for (const l of LAYERS) {
       const lv = smooth(w[l][0], w[l][1], this.intensity);
-      if (Math.abs(lv - this.level[l]) > 0.005) { this.level[l] = lv; this.layerG[l].gain.setTargetAtTime(lv, c.currentTime, 0.6); }
+      if (Math.abs(lv - this.level[l]) > 0.005 || snap) {
+        this.level[l] = lv;
+        if (snap) this.layerG[l].gain.setValueAtTime(lv, c.currentTime); else this.layerG[l].gain.setTargetAtTime(lv, c.currentTime, 0.6);
+      }
     }
-    const stepDur = 60 / th.bpm / 4;
-    while (this.nextT < c.currentTime + 0.2) { this.sched(this.step, this.nextT, th, stepDur); this.step++; this.nextT += stepDur; }
+  }
+
+  /** Public so offline renders can pre-schedule: schedules all steps whose time is < until. */
+  scheduleUntil(until: number) {
+    if (!this.current || !this.layerG) return;
+    for (;;) {
+      if (this.pending && this.step % 16 === 0 && this.nextT < until) {
+        const p = this.pending.name; this.pending = null; this.swap(p, this.nextT, 0.4);
+        if (!this.current || !this.layerG) return;
+      }
+      if (this.nextT >= until) break;
+      const th = THEMES[this.current], sd = 60 / th.bpm / 4;
+      this.sched(this.step, this.nextT, th, sd); this.step++; this.nextT += sd;
+    }
+  }
+
+  tick() {
+    const c = this.ctx; if (!c) return;
+    this.updateLevels();
+    this.scheduleUntil(c.currentTime + 0.2);
+    if (this.heart > 0.01 && c.currentTime >= this.nextBeat) {
+      sfx.play('heartbeat', { volume: 0.6 + this.heart * 0.5 });
+      this.nextBeat = c.currentTime + 1.05 - this.heart * 0.45; // 57..100 bpm
+    }
   }
 
   // --- schedulers ---
