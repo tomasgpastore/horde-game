@@ -12,6 +12,10 @@ export const ENEMIES: EnemyDef[] = [
   { id: 'boss', hp: 1, speed: 0, dmg: 25, xp: 40, radius: 1.5 }, // kind 8: stats driven by BOSSES table; movement by systems/boss.ts
 ];
 export const BOSS_KIND = 8;
+export const SPITTER_KIND = 6, WRAITH_KIND = 7;
+/** Spitter: keeps range, fires a slow shot every `every` ticks (stateless: staggered by slot index). Enemy projectiles = pool kind PK_SPIT, owner HOSTILE. */
+export const SPITTER = { holdMin: 6, holdMax: 10, every: 150, telegraph: 30, range: 16, speed: 7, life: 3, radius: 0.3, dmg: 8 };
+export const HOSTILE = 255, PK_SPIT = 6;
 /** hp/speed/charge per boss id (GDD: Hollow Stag min5, Bell-Warden min10, The Unlit min15). */
 export const BOSSES: Record<string, { name: string; hp: number; speed: number; charge: number; windup: number; cd: number }> = {
   hollow_stag: { name: 'The Hollow Stag', hp: 900, speed: 2.6, charge: 17, windup: 0.9, cd: 3.2 },

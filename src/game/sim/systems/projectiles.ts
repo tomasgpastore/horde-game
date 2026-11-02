@@ -2,7 +2,7 @@ import type { System } from '../system';
 import { alloc } from '../pools';
 import { MAX_PICKUPS, MAX_PROJECTILES } from '@shared/types';
 import { head, next, CELL, cellX, DIM } from './grid';
-import { enemyDef } from '../content/enemies';
+import { enemyDef, PK_SPIT, SPITTER } from '../content/enemies';
 
 const lastHit = new Int16Array(MAX_PROJECTILES).fill(-1);
 export const resetHit = (i: number) => { lastHit[i] = -1; };
@@ -20,6 +20,12 @@ export function killEnemy(s: import('@shared/types').SimState, j: number) {
 export const projectileSystem: System = { name: 'projectiles', update(s, c) {
   const pr = s.projectiles, e = s.enemies;
   for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
+    if (pr.kind[i] === PK_SPIT) { // hostile shot: straight line, hits the first living player not in i-frames
+      pr.x[i] += pr.vx[i] * c.dt; pr.z[i] += pr.vz[i] * c.dt; pr.life[i] -= c.dt; if (pr.life[i] <= 0) { pr.alive[i] = 0; continue; }
+      for (const p of s.players) { if (!p.active || p.dead) continue; const r = SPITTER.radius + 0.4;
+        if ((p.x - pr.x[i]) ** 2 + (p.z - pr.z[i]) ** 2 < r * r) { pr.alive[i] = 0; if (p.iframes <= 0) { const dmg = Math.max(1, pr.dmg[i] - (p.stats.armor ?? 0)); p.hp -= dmg; p.iframes = 0.6;
+          s.events.push({ t: 'playerHurt', id: p.id, dmg }, { t: 'freeze', ms: 50 }); if (p.hp <= 0) { p.dead = true; p.hp = 0; } } break; } }
+      continue; }
     if (pr.kind[i] !== 0 && pr.kind[i] !== 5) { if (pr.kind[i] !== 1) { pr.life[i] -= c.dt; if (pr.life[i] <= 0) pr.alive[i] = 0; } continue; } // bolt-like kinds (0 bolt, 5 seeker spear) move+collide here; others are driven by weapons.ts
     pr.x[i] += pr.vx[i] * c.dt; pr.z[i] += pr.vz[i] * c.dt; pr.life[i] -= c.dt;
     if (pr.life[i] <= 0) { pr.alive[i] = 0; continue; }
