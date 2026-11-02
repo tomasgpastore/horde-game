@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { ArenaDef, ArenaHandle } from '@shared/types';
 import { Rng } from '@shared/rng';
 
-export type PropKind = 'rock' | 'pillar' | 'crystal' | 'shroom' | 'bone' | 'brazier';
+export type PropKind = 'rock' | 'pillar' | 'crystal' | 'shroom' | 'bone' | 'brazier' | 'tree' | 'flower' | 'shard' | 'arch';
 export interface Biome {
   seed: number;
   obstacleKinds: PropKind[];       // how colliders are drawn
@@ -13,6 +13,7 @@ export interface Biome {
   ember: { count: number; color: number; rise: number; size: number };
   groundNoise: [number, number];   // two colors blended in ground texture
   ring?: { color: number; r: number }; // boss: glowing ring decal
+  fog?: { count: number; color: number; opacity: number }; // low drifting mist sprites
   lightIntensity: number; sunDir: [number, number, number];
 }
 
@@ -36,6 +37,16 @@ const geo: Record<PropKind, () => THREE.BufferGeometry> = {
   shroom: () => { const stem = new THREE.CylinderGeometry(0.18, 0.28, 1, 5); stem.translate(0, 0.5, 0);
     const cap = new THREE.SphereGeometry(0.9, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2); cap.translate(0, 1, 0); return merge(stem, cap); },
   bone: () => { const g = new THREE.ConeGeometry(0.25, 2, 4); g.translate(0, 1, 0); g.rotateZ(0.35); return g; },
+  tree: () => { const trunk = new THREE.CylinderGeometry(0.15, 0.4, 4.5, 5); trunk.translate(0, 2.25, 0);
+    const b1 = new THREE.ConeGeometry(0.12, 2.4, 4); b1.rotateZ(1.0); b1.translate(0.9, 3.6, 0);
+    const b2 = new THREE.ConeGeometry(0.1, 2, 4); b2.rotateZ(-1.1); b2.rotateY(1.6); b2.translate(0, 3, 0.8);
+    return merge(merge(trunk, b1), b2); },
+  flower: () => { const stem = new THREE.CylinderGeometry(0.05, 0.08, 1.2, 4); stem.translate(0, 0.6, 0);
+    const bloom = new THREE.OctahedronGeometry(0.45, 0); bloom.scale(1, 0.7, 1); bloom.translate(0, 1.3, 0); return merge(stem, bloom); },
+  shard: () => { const g = new THREE.OctahedronGeometry(1, 0); g.scale(0.45, 1.3, 0.45); g.translate(0, 3.2, 0); return g; },
+  arch: () => { const l = new THREE.CylinderGeometry(0.5, 0.65, 4.5, 6); l.translate(-1.6, 2.25, 0);
+    const r = new THREE.CylinderGeometry(0.5, 0.65, 3, 6); r.translate(1.6, 1.5, 0);
+    const top = new THREE.BoxGeometry(4.2, 0.6, 0.9); top.rotateZ(0.12); top.translate(0, 4.4, 0); return merge(merge(l, r), top); },
   brazier: () => { const bowl = new THREE.CylinderGeometry(0.9, 0.5, 0.7, 6); bowl.translate(0, 1.6, 0);
     const leg = new THREE.CylinderGeometry(0.15, 0.25, 1.4, 5); leg.translate(0, 0.7, 0); return merge(bowl, leg); },
 };
@@ -44,7 +55,7 @@ function merge(a: THREE.BufferGeometry, b: THREE.BufferGeometry) {
   pos.set(ai.attributes.position.array as Float32Array, 0); pos.set(bi.attributes.position.array as Float32Array, ai.attributes.position.count * 3);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
 }
-const EMISSIVE: PropKind[] = ['crystal', 'brazier'];
+const EMISSIVE: PropKind[] = ['crystal', 'brazier', 'flower', 'shard'];
 
 function groundTexture(a: number, b: number, seed: number) {
   const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d')!;
@@ -77,7 +88,7 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
     const lst = buckets.get(k) ?? []; buckets.set(k, lst);
     lst.push({ m: o.matrix.clone(), c: new THREE.Color(col).offsetHSL(0, rng.range(-0.05, 0.05), rng.range(-0.05, 0.06)) });
   };
-  for (const o of def.obstacles) { const k = rng.pick(b.obstacleKinds), s = k === 'pillar' ? o.r / 0.9 : o.r; push(k, o.x, o.z, s, k === 'pillar' ? rng.range(0.8, 1.5) : s * rng.range(0.9, 1.5), rng.range(0, 6.28), rng.pick(b.propColors)); }
+  for (const o of def.obstacles) { const k = rng.pick(b.obstacleKinds), s = k === 'pillar' ? o.r / 0.9 : k === 'arch' ? o.r / 2 : o.r; push(k, o.x, o.z, s, k === 'pillar' ? rng.range(0.8, 1.5) : s * rng.range(0.9, 1.5), rng.range(0, 6.28), rng.pick(b.propColors)); }
   for (const sc of b.scatter) for (let i = 0; i < sc.count; i++) {
     const a = rng.range(0, 6.28), d = Math.sqrt(rng.next()) * (R - 2), x = Math.cos(a) * d, z = Math.sin(a) * d;
     if (def.obstacles.some(o => Math.hypot(o.x - x, o.z - z) < o.r + 0.8)) continue;
@@ -87,18 +98,30 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   const rimN = Math.round(R * 1.6);
   for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5), s = rng.range(1.6, 3.4);
     push('rock', Math.cos(a) * d, Math.sin(a) * d, s, s * rng.range(1.2, 2.4), rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
-  const glowMats: THREE.MeshLambertMaterial[] = [];
+  const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? 0.9 : 0 });
     if (emissive) glowMats.push(mat);
     const im = new THREE.InstancedMesh(g, mat, lst.length); lst.forEach((l, i) => { im.setMatrixAt(i, l.m); im.setColorAt(i, l.c); });
-    im.castShadow = k !== 'bone'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
+    if (k === 'shard') shards = im; im.castShadow = k !== 'bone' && k !== 'shard'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
   }
   // optional glowing ring decal (boss arena)
   let ring: THREE.Mesh | undefined;
   if (b.ring) { const rm = new THREE.MeshBasicMaterial({ color: b.ring.color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
     ring = new THREE.Mesh(new THREE.RingGeometry(b.ring.r - 0.35, b.ring.r + 0.35, 96), rm); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; add(ring); disposables.push(rm, ring.geometry); }
+  let ring2: THREE.Mesh | undefined;
+  if (b.ring) { const m2 = new THREE.MeshBasicMaterial({ color: b.ring.color, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false });
+    ring2 = new THREE.Mesh(new THREE.CircleGeometry(b.ring.r, 64), m2); ring2.rotation.x = -Math.PI / 2; ring2.position.y = 0.03; add(ring2); disposables.push(m2, ring2.geometry); }
+  // low mist: big soft sprites hugging the ground (one draw call)
+  let mist: THREE.Points | undefined, mp: Float32Array | undefined;
+  if (b.fog) { const F = b.fog, c3 = document.createElement('canvas'); c3.width = c3.height = 64; const g3 = c3.getContext('2d')!, gr3 = g3.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr3.addColorStop(0, 'rgba(255,255,255,0.5)'); gr3.addColorStop(1, 'rgba(255,255,255,0)'); g3.fillStyle = gr3; g3.fillRect(0, 0, 64, 64);
+    const ft = new THREE.CanvasTexture(c3); mp = new Float32Array(F.count * 3);
+    for (let i = 0; i < F.count; i++) { const a = rng.range(0, 6.28), d = Math.sqrt(rng.next()) * R; mp[i * 3] = Math.cos(a) * d; mp[i * 3 + 1] = rng.range(0.3, 1.4); mp[i * 3 + 2] = Math.sin(a) * d; }
+    const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+    const mm = new THREE.PointsMaterial({ map: ft, color: F.color, size: 9, transparent: true, opacity: F.opacity, depthWrite: false, sizeAttenuation: true });
+    mist = new THREE.Points(mg, mm); mist.frustumCulled = false; add(mist); disposables.push(ft, mg, mm); }
   // embers / motes (one Points draw call)
   const E = b.ember, ep = new Float32Array(E.count * 3), ev = new Float32Array(E.count * 2);
   for (let i = 0; i < E.count; i++) { const a = rng.range(0, 6.28), d = Math.sqrt(rng.next()) * R; ep[i * 3] = Math.cos(a) * d; ep[i * 3 + 1] = rng.range(0, 14); ep[i * 3 + 2] = Math.sin(a) * d; ev[i * 2] = rng.range(0.5, 1.5); ev[i * 2 + 1] = rng.range(0, 6.28); }
@@ -116,6 +139,11 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
         ep[i * 3 + 1] = y; ep[i * 3] += Math.sin(t * 0.7 + ph) * 0.6 * dt; ep[i * 3 + 2] += Math.cos(t * 0.6 + ph) * 0.6 * dt; }
       a.needsUpdate = true;
       const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse;
+      if (shards) shards.position.y = Math.sin(t * 0.8) * 0.35;
+      if (mist && mp) { const ma = mist.geometry.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < mp.length; i += 3) mp[i] += (0.25 + (i % 7) * 0.03) * dt, mp[i] > R && (mp[i] = -R);
+        ma.needsUpdate = true; }
+      if (ring2) (ring2.material as THREE.MeshBasicMaterial).opacity = 0.07 + Math.sin(t * 4) * 0.04;
       if (ring) (ring.material as THREE.MeshBasicMaterial).opacity = 0.4 + Math.sin(t * 2) * 0.15;
     },
     dispose() { for (const o of objs) scene.remove(o); for (const d of disposables) d.dispose(); },
