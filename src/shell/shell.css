@@ -93,3 +93,4 @@ body.in-menu #game>div{display:none!important} /* game HUD overlay (#game's ui d
 @keyframes emberrise{to{background-position:-30px -420px,40px -610px,-60px -300px}}
 @media (prefers-reduced-motion:reduce){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}
 .screen:has(.results) .results{position:relative;z-index:1}
+@media (pointer:coarse){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}
