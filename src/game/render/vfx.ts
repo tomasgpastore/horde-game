@@ -41,10 +41,10 @@ export class Vfx {
     this.dm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Vfx.ND * 3), 3); this.dm.frustumCulled = false; this.dm.count = 0; this.dm.renderOrder = 1; scene.add(this.dm); }
   disc(x: number, z: number, color: number, R: number, life: number) { const i = this.dh; this.dh = (i + 1) % Vfx.ND; this.dx[i * 2] = x; this.dx[i * 2 + 1] = z; this.dmx[i] = R; this.dl[i] = this.dr[i] = life; this.dc[i] = color; }
   private updateDisc(dt: number) { let k = 0; for (let i = 0; i < Vfx.ND; i++) { if (this.dl[i] <= 0) continue; this.dl[i] -= dt; if (this.dl[i] <= 0) continue; const t = 1 - this.dl[i] / this.dr[i], r = this.dmx[i] * (1 - (1 - t) * (1 - t) * (1 - t));
-      this.o.position.set(this.dx[i * 2], 0.1, this.dx[i * 2 + 1]); this.o.rotation.set(0, 0, 0); this.o.scale.set(r, 1, r); this.o.updateMatrix(); this.dm.setMatrixAt(k, this.o.matrix); this.c.setHex(this.dc[i]).multiplyScalar(0.55 * (1 - t) * (1 - t)); this.dm.setColorAt(k++, this.c); }
+      this.o.position.set(this.dx[i * 2], 0.1, this.dx[i * 2 + 1]); this.o.rotation.set(0, 0, 0); this.o.scale.set(r, 1, r); this.o.updateMatrix(); this.dm.setMatrixAt(k, this.o.matrix); this.c.setHex(this.dc[i]).multiplyScalar(0.3 * (1 - t) * (1 - t) * (1 - t)); this.dm.setColorAt(k++, this.c); }
     this.dm.count = k; this.dm.instanceMatrix.needsUpdate = true; if (this.dm.instanceColor) this.dm.instanceColor.needsUpdate = true; }
   /** Frost nova: expanding ice ring (thick, #9fe8ff) + inner white pulse. */
-  nova(x: number, z: number, R: number) { this.disc(x, z, 0x9fe8ff, R, 0.5); this.ring(x, z, 0x9fe8ff, R, 0.45, 0.2); this.ring(x, z, 0xffffff, R * 0.7, 0.3, 0.25); this.ring(x, z, 0x9fe8ff, R * 0.4, 0.5, 0.15); }
+  nova(x: number, z: number, R: number) { this.disc(x, z, 0x9fe8ff, R, 0.35); this.ring(x, z, 0x9fe8ff, R, 0.45, 0.2); this.ring(x, z, 0xffffff, R * 0.7, 0.3, 0.25); this.ring(x, z, 0x9fe8ff, R * 0.4, 0.5, 0.15); }
   // --- gem trail: tiny additive diamonds left behind magnetised gems; fade+shrink ---
   static NT = 256; private tm!: THREE.InstancedMesh; private tx = new Float32Array(Vfx.NT * 3); private tl = new Float32Array(Vfx.NT); private tc = new Uint32Array(Vfx.NT); private th = 0;
   private initTrail(scene: THREE.Scene) { this.tm = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }), Vfx.NT);
