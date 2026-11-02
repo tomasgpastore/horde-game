@@ -56,11 +56,11 @@ function stag(): Boss {
   const legs: THREE.Mesh[] = [];
   for (const [x, z] of [[-0.9, 1.6], [0.9, 1.6], [-0.9, -1.6], [0.9, -1.6]]) legs.push(add(new THREE.CylinderGeometry(0.2, 0.3, 2.4, 5), bone, x, 1.2, z));
   const tail = add(new THREE.ConeGeometry(0.3, 1.2, 4), ember, 0, 2.6, -2.9, -Math.PI / 2 - 0.4, 0, 0);
-  return finish(r, 2.2, 0xff6a2b, (t, hp, tel) => {
+  return finish(r, 3.1, 0xff6a2b, (t, hp, tel) => {
     torso.scale.y = 0.9 + Math.sin(t * 2) * 0.03; head.position.y = 4.0 + Math.sin(t * 2.2) * 0.1; tail.rotation.z = Math.sin(t * 3) * 0.3;
     legs.forEach((l, i) => { l.rotation.x = Math.sin(t * 6 + i * 1.6) * 0.25 * (1 - tel); });
     head.rotation.x = Math.PI / 2 + 0.3 + tel * 0.5; // lowers antlers before a charge
-  });
+  }, 1.4); // 1.4x: was buried in the horde
 }
 
 /** BELL-WARDEN (Drowned Cathedral): armored giant with a great bell for a torso, hammer arm, teal glow. ~7u tall. */
@@ -79,10 +79,10 @@ function bellWarden(): Boss {
   add(new THREE.BoxGeometry(1.6, 1.4, 1.6), iron, 0, -2.8, 0.7, 0, 0, 0, armR);                          // hammer fist
   add(new THREE.BoxGeometry(1.2, 0.1, 1.2), teal, 0, -3.5, 0.7, 0, 0, 0, armR);
   add(new THREE.CylinderGeometry(0.5, 0.7, 1.6, 6), iron, -0.8, 0.8, 0); add(new THREE.CylinderGeometry(0.5, 0.7, 1.6, 6), iron, 0.8, 0.8, 0);
-  return finish(r, 2.4, 0x19c9a5, (t, hp, tel) => {
+  return finish(r, 2.9, 0x19c9a5, (t, hp, tel) => {
     bell.rotation.z = Math.sin(t * 1.5) * 0.02; clapper.position.x = Math.sin(t * 4) * 0.4 * (1 + tel); head.position.y = 5.4 + Math.sin(t * 2) * 0.05;
     armR.rotation.x = -tel * 2.4 + Math.sin(t * 2) * 0.05; armL.rotation.x = Math.sin(t * 2 + 1) * 0.08;  // raise hammer on telegraph
-  });
+  }, 1.2);
 }
 
 /** THE UNLIT (Void Garden): floating dark star — jagged core ringed by orbiting shards, violet/magenta, eye in the center. ~6u. */
