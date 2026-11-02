@@ -11,6 +11,7 @@ import { OccluderFader } from './occluders';
 import { createHero } from './hero';
 import { CameraRig } from './camera';
 import { EnemyRenderer, KIND_COLORS } from './enemies';
+import { BOSS_COLORS } from './bosses';
 import { Vfx, createTelegraph } from './vfx';
 import { DamageNumbers } from './dmgnums';
 import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
@@ -63,7 +64,7 @@ export class Renderer {
       else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
       else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
-      else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); const bc = e.bossId === 'hollow_stag' ? 0xff6a2b : e.bossId === 'bell_warden' ? 0xff2e88 : 0xb06bff; this.vfx.ring(e.x, e.z, bc, 26, 1.4); this.vfx.ring(e.x, e.z, 0xffffff, 14, 0.8, 0.3); this.burst(e.x, e.z, 140, bc, 13); this.burst(e.x, e.z, 60, 0xffffff, 7); this.burst(e.x, e.z, 50, 0xffd35a, 18); }
+      else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); this.vfx.bossDeath(e.x, e.z, BOSS_COLORS[e.bossId as keyof typeof BOSS_COLORS] ?? 0xff3355); this.burst(e.x, e.z, 60, 0xffd35a, 18); }
       else if (e.t === 'levelUp') { this.rig.addTrauma(0.2); this.slowmo = 0.6; this.vfx.levelUp(this.playerMesh.position.x, this.playerMesh.position.z); this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9); }
     }
   }
