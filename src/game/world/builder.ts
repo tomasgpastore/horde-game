@@ -14,6 +14,7 @@ export interface Biome {
   groundNoise: [number, number];   // two colors blended in ground texture
   ring?: { color: number; r: number }; // boss: glowing ring decal
   fog?: { count: number; color: number; opacity: number }; // low drifting mist sprites
+  hemiSky?: number;
   lightIntensity: number; sunDir: [number, number, number];
 }
 
@@ -57,30 +58,52 @@ function merge(a: THREE.BufferGeometry, b: THREE.BufferGeometry) {
 }
 const EMISSIVE: PropKind[] = ['crystal', 'brazier', 'flower', 'shard'];
 
-function groundTexture(a: number, b: number, seed: number) {
-  const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d')!;
-  const ca = new THREE.Color(a), cb = new THREE.Color(b), rng = new Rng(seed);
-  g.fillStyle = '#' + ca.getHexString(); g.fillRect(0, 0, N, N);
-  for (let i = 0; i < 900; i++) { const x = rng.range(0, N), y = rng.range(0, N), r = rng.range(2, 18), t = rng.next();
-    const c = ca.clone().lerp(cb, t); g.fillStyle = `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},0.18)`;
-    for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { g.beginPath(); g.arc(x + ox, y + oy, r, 0, 6.2832); g.fill(); } }
-  const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return tex;
+/** One non-repeating 1024px map over the whole disc (+ emissive map for glowing cracks). */
+function groundTextures(b: Biome, p: ArenaDef['palette'], R: number) {
+  const N = 1024, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
+  const cv = mk(), ce = mk(), g = cv.getContext('2d')!, ge = ce.getContext('2d')!, rng = new Rng(b.seed ^ 0x51ed);
+  const ca = new THREE.Color(b.groundNoise[0]), cb = new THREE.Color(b.groundNoise[1]), acc = new THREE.Color(p.accent), px = N / (2 * R);
+  g.fillStyle = '#' + ca.getHexString(); g.fillRect(0, 0, N, N); ge.fillStyle = '#000'; ge.fillRect(0, 0, N, N);
+  const rgba = (c: THREE.Color, a: number) => `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${a})`;
+  // large soft blotches + fine grit
+  for (let i = 0; i < 220; i++) { const x = rng.range(0, N), y = rng.range(0, N), r = rng.range(30, 120), c = ca.clone().lerp(cb, rng.next());
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(c, 0.35)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  for (let i = 0; i < 5000; i++) { const x = rng.range(0, N), y = rng.range(0, N), c = ca.clone().lerp(cb, rng.next()).offsetHSL(0, 0, rng.range(-0.06, 0.06));
+    g.fillStyle = rgba(c, 0.5); g.fillRect(x, y, rng.range(1, 4), rng.range(1, 4)); }
+  // worn paths: lighter winding strips from centre outwards
+  const nPaths = 4 + rng.int(3), pathCol = ca.clone().lerp(cb, 0.5).offsetHSL(0, 0, 0.07);
+  for (let k = 0; k < nPaths; k++) { let a = rng.range(0, 6.28), d = 0, x = N / 2, y = N / 2; g.strokeStyle = rgba(pathCol, 0.45); g.lineCap = 'round';
+    g.lineWidth = rng.range(14, 26); g.beginPath(); g.moveTo(x, y);
+    while (d < R * px * 0.95) { a += rng.range(-0.25, 0.25); x += Math.cos(a) * 14; y += Math.sin(a) * 14; d = Math.hypot(x - N / 2, y - N / 2); g.lineTo(x, y); } g.stroke(); }
+  // spawn clearing + concentric rune ring (boss arena style ring if set)
+  g.strokeStyle = rgba(pathCol, 0.5); g.lineWidth = 6; g.beginPath(); g.arc(N / 2, N / 2, 6 * px, 0, 6.2832); g.stroke();
+  // glowing cracks (colour map gets a dim copy, emissive map the bright one)
+  const nCr = 26;
+  for (let k = 0; k < nCr; k++) { let a = rng.range(0, 6.28), x = N / 2 + Math.cos(a) * rng.range(8, R * 0.95) * px, y = N / 2 + Math.sin(a) * rng.range(8, R * 0.95) * px;
+    if (Math.hypot(x - N / 2, y - N / 2) < 5 * px) continue;
+    const pts: [number, number][] = [[x, y]]; const len = rng.int(14) + 8;
+    for (let s = 0; s < len; s++) { a += rng.range(-0.7, 0.7); x += Math.cos(a) * rng.range(10, 24); y += Math.sin(a) * rng.range(10, 24); pts.push([x, y]); }
+    const stroke = (ctx: CanvasRenderingContext2D, col: string, w: number) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach(([X, Y], i) => i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y)); ctx.stroke(); };
+    stroke(g, 'rgba(0,0,0,0.6)', 7); stroke(g, rgba(acc, 0.5), 2.5);
+    ge.shadowColor = rgba(acc, 1); ge.shadowBlur = 10; stroke(ge, rgba(acc.clone().lerp(new THREE.Color(1, 1, 1), 0.25), 1), 3); ge.shadowBlur = 0; }
+  const wrap = (c: HTMLCanvasElement, srgb: boolean) => { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  return { map: wrap(cv, true), emissive: wrap(ce, true) };
 }
 
 export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHandle {
   const R = def.radius, p = def.palette, rng = new Rng(b.seed ^ 0x9e37), disposables: { dispose(): void }[] = [], objs: THREE.Object3D[] = [];
   const add = (o: THREE.Object3D) => { scene.add(o); objs.push(o); return o; };
   // ground disc + dark skirt so the void never shows
-  const tex = groundTexture(p.ground, b.groundNoise[0] === p.ground ? b.groundNoise[1] : b.groundNoise[0], b.seed); tex.repeat.set(R / 6, R / 6);
-  const gmat = new THREE.MeshLambertMaterial({ map: tex, color: 0xffffff }); const ground = new THREE.Mesh(new THREE.CircleGeometry(R, 64), gmat);
+  const gt = groundTextures(b, p, R), tex = gt.map;
+  const gmat = new THREE.MeshLambertMaterial({ map: gt.map, emissiveMap: gt.emissive, emissive: 0xffffff, emissiveIntensity: 0.9 }); const ground = new THREE.Mesh(new THREE.CircleGeometry(R, 64), gmat);
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; add(ground);
   const skirtMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.ground).multiplyScalar(0.35) });
   const skirt = new THREE.Mesh(new THREE.RingGeometry(R - 0.1, R + 90, 48, 1), skirtMat); skirt.rotation.x = -Math.PI / 2; skirt.position.y = -0.05; add(skirt);
-  disposables.push(tex, gmat, skirtMat, ground.geometry, skirt.geometry);
+  disposables.push(tex, gt.emissive, gmat, skirtMat, ground.geometry, skirt.geometry);
   // lights
   const sun = new THREE.DirectionalLight(p.light, b.lightIntensity); sun.position.set(...b.sunDir); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); const sc = sun.shadow.camera; sc.left = -28; sc.right = 28; sc.top = 28; sc.bottom = -28; sc.near = 1; sc.far = 80;
-  const hemi = new THREE.HemisphereLight(0xaab4ff, new THREE.Color(p.ground).multiplyScalar(2.5), 1.6); add(sun); add(hemi);
+  const hemi = new THREE.HemisphereLight(b.hemiSky ?? 0xaab4ff, new THREE.Color(p.ground).multiplyScalar(2.5), 1.6); add(sun); add(hemi);
   // instanced props: one InstancedMesh per kind (collider-drawn + scatter + rim)
   const buckets = new Map<PropKind, { m: THREE.Matrix4; c: THREE.Color }[]>();
   const push = (k: PropKind, x: number, z: number, sx: number, sy: number, ry: number, col: number, lift = 0) => {
@@ -95,10 +118,10 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
     const s = rng.range(...sc.scale); push(sc.kind, x, z, s, s * rng.range(0.8, 1.6), rng.range(0, 6.28), rng.pick(b.propColors));
   }
   // rim wall: tall jagged rocks just outside the playable edge
-  const rimN = Math.round(R * 1.6);
-  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5), s = rng.range(1.6, 3.4);
-    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, s * rng.range(1.2, 2.4), rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
-  const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined;
+  const rimN = Math.round(R * 2.6);
+  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5), s = rng.range(1.8, 4);
+    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, s * rng.range(1.5, 3.2), rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
     const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? 0.9 : 0 });
@@ -110,6 +133,8 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   let ring: THREE.Mesh | undefined;
   if (b.ring) { const rm = new THREE.MeshBasicMaterial({ color: b.ring.color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
     ring = new THREE.Mesh(new THREE.RingGeometry(b.ring.r - 0.35, b.ring.r + 0.35, 96), rm); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; add(ring); disposables.push(rm, ring.geometry); }
+  { const em = new THREE.MeshBasicMaterial({ color: p.accent, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const er = new THREE.Mesh(new THREE.RingGeometry(R - 1.1, R + 0.1, 96), em); er.rotation.x = -Math.PI / 2; er.position.y = 0.05; add(er); disposables.push(em, er.geometry); edge = em; }
   let ring2: THREE.Mesh | undefined;
   if (b.ring) { const m2 = new THREE.MeshBasicMaterial({ color: b.ring.color, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false });
     ring2 = new THREE.Mesh(new THREE.CircleGeometry(b.ring.r, 64), m2); ring2.rotation.x = -Math.PI / 2; ring2.position.y = 0.03; add(ring2); disposables.push(m2, ring2.geometry); }
@@ -139,6 +164,7 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
         ep[i * 3 + 1] = y; ep[i * 3] += Math.sin(t * 0.7 + ph) * 0.6 * dt; ep[i * 3 + 2] += Math.cos(t * 0.6 + ph) * 0.6 * dt; }
       a.needsUpdate = true;
       const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse;
+      if (edge) edge.opacity = 0.35 + Math.sin(t * 1.5) * 0.12;
       if (shards) shards.position.y = Math.sin(t * 0.8) * 0.35;
       if (mist && mp) { const ma = mist.geometry.attributes.position as THREE.BufferAttribute;
         for (let i = 0; i < mp.length; i += 3) mp[i] += (0.25 + (i % 7) * 0.03) * dt, mp[i] > R && (mp[i] = -R);
