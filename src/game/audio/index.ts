@@ -34,6 +34,8 @@ export class Audio {
   /** Card screen open/closed (also auto-detected from state.phase). */
   setCards(open: boolean) { if (open === this.cards) return; this.cards = open; music.setPaused(open); }
   ui(kind: 'click' | 'hover' | 'card' | 'back') { sfx.play(('ui_' + kind) as SfxName); }
+  /** PLAY click stinger (whoosh + boom, ~0.6s in; whiteout lands at ~0.8s). Ducks title music briefly. */
+  stinger() { sfx.play('stinger'); music.duck(-5, 1.0); }
   evolve() { sfx.play('evolve'); music.duck(-8, 1.2); }
 
   consume(events: SimEvent[], state?: SimState) {
