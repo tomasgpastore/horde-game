@@ -65,7 +65,7 @@ export class Renderer {
       vertexShader: 'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader: 'uniform sampler2D tDiffuse;uniform float amount;varying vec2 v;void main(){vec4 c=texture2D(tDiffuse,v);float d=distance(v,vec2(.5));c.rgb*=1.-smoothstep(.35,.85,d)*amount;gl_FragColor=c;}' }));
     this.composer.addPass(new OutputPass());
-    const onResize = () => { this.three.setSize(innerWidth, innerHeight, false); this.composer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); };
+    const onResize = () => { this.three.setSize(innerWidth, innerHeight, false); this.composer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.fov = this.camera.aspect < 1 ? 55 : 45; this.camera.updateProjectionMatrix(); };
     addEventListener('resize', onResize); onResize();
   }
   private burst(x: number, z: number, n: number, col: number, spd: number) {
