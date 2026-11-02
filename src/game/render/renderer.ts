@@ -26,7 +26,9 @@ export class Renderer {
   composer: EffectComposer; bloomOn = new URLSearchParams(location.search).get('bloom') !== '0'; // ?bloom=0 for software-GL CI shake = 0;
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
-  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
+  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
+    const pr = Math.min(devicePixelRatio, q === 'low' ? 1.25 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight);
+    const sh = q !== 'low'; if (this.three.shadowMap.enabled !== sh) { this.three.shadowMap.enabled = sh; this.scene.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (m) [m].flat().forEach(x => x.needsUpdate = true); }); } }
   occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });

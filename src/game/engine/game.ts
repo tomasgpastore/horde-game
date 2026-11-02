@@ -3,6 +3,7 @@ import { Sim, createState } from '@sim/index';
 import { Renderer } from '@render/renderer';
 import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
+import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
 import type { Settings, ShellInput } from './createGame';
@@ -34,6 +35,7 @@ export class Game {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
     const r = (this.renderer as any)?.three; if (r) (this.renderer as any).setQuality(s.quality);
+    limits.maxAlive = s.quality === 'low' ? 200 : MAX_ALIVE; // Low: fewer enemies alive
     dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
     (this.renderer as any)?.setShake?.(s.shake);
   }
