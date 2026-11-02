@@ -1,0 +1,13 @@
+{
+  "name": "horde-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "server:dev": "node server/index.js"
+  },
+  "dependencies": { "ws": "^8.18.0" },
+  "devDependencies": { "vite": "^7.0.0", "three": "^0.180.0" }
+}
