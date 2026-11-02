@@ -1,6 +1,6 @@
 import { Game } from './game';
 export interface Settings { volume: number; music: number; sfx: number; quality: 'low' | 'med' | 'high'; shake: boolean | number }
-export interface ShellInput { move: { x: number; y: number }; touch: boolean }
+export interface ShellInput { move: { x: number; y: number }; touch: boolean; dash?: boolean }
 export interface GameApi { start(o: { mode: 'solo' | 'coop' }): void; pause(): void; resume(): void; quit(): void; applySettings(s: Settings): void }
 
 /** Shell contract. Heavy init (assets, shaders) should report via onProgress. */
