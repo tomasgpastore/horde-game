@@ -34,11 +34,7 @@ export function waveFor(wave: number): WaveDef {
   return {
     wave: w,
     rate: 3.2 + w * 1.5 + Math.pow(w, 1.35) * 0.2,
-<<<<<<< HEAD
     cap: Math.min(limits.maxAlive, 100 + w * 50),
-=======
-    cap: Math.min(MAX_ALIVE, 55 + w * 20),
->>>>>>> origin/design/tuning-1
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
     surge: w >= 1 ? { every: 16, count: 12 + w * 4 } : undefined,
   };
