@@ -10,18 +10,21 @@ export const WEAPONS: Record<string, WeaponDef> = {
 };
 export const MAX_WEAPON_LEVEL = 8;
 /** projectiles per shot, damage and cooldown scaling by level */
-export const boltCount = (lvl: number) => 1 + (lvl >= 3 ? 1 : 0) + (lvl >= 6 ? 1 : 0);
+export const boltCount = (lvl: number) => 1 + (lvl >= 3 ? 1 : 0) + (lvl >= 6 ? 1 : 0) + (lvl >= 9 ? 1 : 0) + (lvl >= 11 ? 1 : 0);
 export const levelDmg = (lvl: number) => 1 + 0.25 * (lvl - 1);
 export const levelCd = (lvl: number) => Math.pow(0.93, lvl - 1);
 export const levelPierce = (lvl: number) => (lvl >= 4 ? 1 : 0) + (lvl >= 8 ? 2 : 0);
 
-export const ORBIT = { radius: 2.4, speed: 3.2, dmg: 5, hitCd: 0.35 };
+/** area growth per level: lvl6 = +20-35% (blades/nova/lava/chain range), evolved (lvl12) ~ +45-75% */
+export const levelArea = (lvl: number, per: number) => 1 + per * (lvl - 1);
+export const ORBIT = { radius: 2.4, speed: 3.2, dmg: 7, hitCd: 0.35 };
 export const orbitCount = (lvl: number) => 2 + Math.floor(lvl / 2);
-export const NOVA = { cooldown: 3.2, radius: 5.5, dmg: 9, knock: 2.5 };
+export const NOVA = { cooldown: 3.0, radius: 5.5, dmg: 11, knock: 2.5 };
 export const CHAIN = { cooldown: 1.3, dmg: 10, range: 6, first: 14 };
 export const chainJumps = (lvl: number) => 2 + Math.floor(lvl / 2);
 
-export const LAVA = { cooldown: 0.22, dmg: 4, radius: 1.1, hitCd: 0.4 };
+export const LAVA = { cooldown: 0.22, dmg: 5, radius: 1.1, hitCd: 0.4 };
 export const lavaLife = (lvl: number) => 2.4 + 0.2 * lvl;
 export const SPEARS = { cooldown: 1.1, dmg: 9, speed: 11, life: 2.6, range: 18, turn: 5 };
 export const spearCount = (lvl: number) => 2 + Math.floor(lvl / 3);
+export const spearPierce = (lvl: number) => 1 + Math.floor(lvl / 4);

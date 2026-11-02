@@ -72,3 +72,13 @@ test('M hotkey toggles mute in game, not while typing', async ({ page }) => {
   await page.evaluate(() => { const i = document.createElement('input'); i.id = 'tmp'; document.body.appendChild(i); i.focus(); });
   await page.keyboard.press('KeyM'); expect(await muted()).toBe(false); // typing in an input: ignored
 });
+
+test('real boss telegraph/slam events trigger boss_telegraph / boss_slam', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?autoplay=1&t=298'); await hook(page); await page.click('button[data-a=play]');
+  await page.waitForFunction(() => (window as any).__game?.sim?.state?.tick > 30);
+  await page.evaluate(() => { const w = window as any, s = w.__audio.sfx, o = s.play.bind(s); w.T = {}; s.play = (n: string, p: any) => { w.T[n] = (w.T[n] || 0) + 1; return o(n, p); }; });
+  // wait for the sim itself to emit them (boss spawns at 300s, then chase -> telegraph -> charge -> slam)
+  await page.waitForFunction(() => { const T = (window as any).T; return T.boss_telegraph >= 2 && T.boss_slam >= 1; }, null, { timeout: 40000 });
+  expect(errors).toEqual([]);
+});

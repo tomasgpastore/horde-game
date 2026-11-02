@@ -7,11 +7,13 @@ import { enemySystem } from './systems/enemies';
 import { spawner } from './systems/spawner';
 import { arenaCollision } from './systems/arenaCollision';
 import { bossSystem } from './systems/boss';
+import { spitterSystem } from './systems/spitters';
 import { swarmSystem } from './systems/swarms';
 import { eliteSystem } from './systems/elites';
 import { gridSystem } from './systems/grid';
 import { weaponSystem } from './systems/weapons';
 import { projectileSystem } from './systems/projectiles';
+import { abilitySystem } from './systems/ability';
 import { pickupSystem } from './systems/pickups';
 import { MAX_WEAPON_LEVEL } from './content/weapons';
 import { applyUpgrade } from './content/upgrades';
@@ -24,13 +26,13 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
       stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 3, cooldownMult: 1 }, dead: false };
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
-    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, eliteCount: 0, swarmCount: 0, levelChoices: [],
+    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, eliteCount: 0, swarmCount: 0, biomeT0: 0, biome: 0, bossReward: false, levelChoices: [],
     boss: null, spawner: { budget: 0, nextSurge: 14, lastWave: 0, boss: false } };
 }
 
 /** Deterministic fixed-step simulation. Same (seed, input stream) => same state. Runs in browser now, Node server later. */
 export class Sim {
-  rng: Rng; systems: System[] = [spawner, eliteSystem, swarmSystem, playerSystem, gridSystem, weaponSystem, projectileSystem, enemySystem, bossSystem, arenaCollision, pickupSystem];
+  rng: Rng; systems: System[] = [spawner, eliteSystem, swarmSystem, playerSystem, abilitySystem, gridSystem, weaponSystem, projectileSystem, enemySystem, spitterSystem, bossSystem, arenaCollision, pickupSystem];
   constructor(public state: SimState, public arena: ArenaDef) { this.rng = new Rng(state.seed); }
   register(sys: System, before?: string) {
     const i = before ? this.systems.findIndex(s => s.name === before) : -1;

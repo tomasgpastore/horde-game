@@ -2,7 +2,7 @@ import type { System, SimCtx } from '../system';
 import { alloc } from '../pools';
 import { MAX_PROJECTILES, MAX_ENEMIES } from '@shared/types';
 import type { SimState, PlayerState } from '@shared/types';
-import { WEAPONS, boltCount, levelDmg, levelCd, levelPierce, ORBIT, orbitCount, NOVA, CHAIN, chainJumps, LAVA, lavaLife, SPEARS, spearCount } from '../content/weapons';
+import { WEAPONS, boltCount, levelDmg, levelCd, levelPierce, ORBIT, orbitCount, NOVA, CHAIN, chainJumps, LAVA, lavaLife, SPEARS, spearCount, levelArea, spearPierce } from '../content/weapons';
 import { resetHit, killEnemy } from './projectiles';
 
 /** Projectile kinds: 0 bolt, 1 orbit blade (positioned by weapon system), 2 nova ring (expanding, vx=max radius), 3 chain spark (brief), 4 lava patch (stationary, life ~3s, ticks damage), 5 seeker spear (bolt-like, homing). */
@@ -35,14 +35,14 @@ function bolt(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons'][
 function orbit(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons'][0]) {
   const pr = s.projectiles, e = s.enemies;
   for (let i = 0; i < pr.count; i++) if (pr.alive[i] && pr.kind[i] === 1 && pr.owner[i] === p.id) pr.alive[i] = 0;
-  const n = orbitCount(w.level), R = ORBIT.radius * p.stats.area, ang0 = s.time * ORBIT.speed, dmg = ORBIT.dmg * levelDmg(w.level) * p.stats.damageMult;
+  const n = orbitCount(w.level), R = ORBIT.radius * p.stats.area * levelArea(w.level, 0.04), ang0 = s.time * ORBIT.speed, dmg = ORBIT.dmg * levelDmg(w.level) * p.stats.damageMult;
   for (let k = 0; k < n; k++) { const a = ang0 + k / n * Math.PI * 2, bx = p.x + Math.cos(a) * R, bz = p.z + Math.sin(a) * R;
     spawnProj(s, 1, p.id, bx, bz, 0, 0, 1, dmg, 99);
     for (let j = 0; j < e.count; j++) { if (!e.alive[j] || orbitCdT[j] > s.time) continue;
       const dx = e.x[j] - bx, dz = e.z[j] - bz; if (dx * dx + dz * dz < 0.9 * 0.9) { orbitCdT[j] = s.time + ORBIT.hitCd; damage(s, c, j, dmg); } } }
 }
 function nova(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons'][0]) {
-  const R = NOVA.radius * p.stats.area * (1 + 0.06 * (w.level - 1)), e = s.enemies;
+  const R = NOVA.radius * p.stats.area * levelArea(w.level, 0.08), e = s.enemies;
   let any = false; for (let j = 0; j < e.count && !any; j++) if (e.alive[j]) { const dx = e.x[j] - p.x, dz = e.z[j] - p.z; if (dx * dx + dz * dz < R * R * 1.5) any = true; }
   if (!any) { w.cooldown = 0.1; return; }
   w.cooldown = NOVA.cooldown * levelCd(w.level) * p.stats.cooldownMult;
@@ -58,20 +58,20 @@ function chain(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons']
   const e = s.enemies, dmg = CHAIN.dmg * levelDmg(w.level) * p.stats.damageMult; chainSeen.fill(0, 0, e.count);
   for (let k = 0, jumps = chainJumps(w.level); k <= jumps && j >= 0; k++) {
     chainSeen[j] = 1; const x = e.x[j], z = e.z[j]; spawnProj(s, 3, p.id, x, z, 0, 0, 0.14, 0, 0); damage(s, c, j, dmg);
-    j = nearest(s, x, z, CHAIN.range, chainSeen);
+    j = nearest(s, x, z, CHAIN.range * levelArea(w.level, 0.05), chainSeen);
   }
   s.events.push({ t: 'shoot', weapon: w.id, x: p.x, z: p.z, owner: p.id });
 }
 function lava(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons'][0]) {
   w.cooldown = LAVA.cooldown * p.stats.cooldownMult;
-  spawnProj(s, 4, p.id, p.x, p.z, LAVA.radius * p.stats.area, 0, lavaLife(w.level), LAVA.dmg * levelDmg(w.level) * p.stats.damageMult, 0);
+  spawnProj(s, 4, p.id, p.x, p.z, LAVA.radius * p.stats.area * levelArea(w.level, 0.07), 0, lavaLife(w.level), LAVA.dmg * levelDmg(w.level) * p.stats.damageMult, 0);
 }
 function spears(s: SimState, c: SimCtx, p: PlayerState, w: PlayerState['weapons'][0]) {
   const t = nearest(s, p.x, p.z, SPEARS.range, null); if (t < 0) { w.cooldown = 0.05; return; }
   w.cooldown = SPEARS.cooldown * levelCd(w.level) * p.stats.cooldownMult;
   const n = spearCount(w.level), base = Math.atan2(s.enemies.z[t] - p.z, s.enemies.x[t] - p.x), dmg = SPEARS.dmg * levelDmg(w.level) * p.stats.damageMult;
   for (let k = 0; k < n; k++) { const a = base + (k - (n - 1) / 2) * 0.7;
-    spawnProj(s, 5, p.id, p.x, p.z, Math.cos(a) * SPEARS.speed, Math.sin(a) * SPEARS.speed, SPEARS.life, dmg, 1); }
+    spawnProj(s, 5, p.id, p.x, p.z, Math.cos(a) * SPEARS.speed, Math.sin(a) * SPEARS.speed, SPEARS.life, dmg, spearPierce(w.level)); }
   s.events.push({ t: 'shoot', weapon: w.id, x: p.x, z: p.z, owner: p.id });
 }
 /** Per-tick passes for persistent projectiles: lava patches damage enemies standing in them; spears steer toward the nearest enemy. */
