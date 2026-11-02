@@ -100,7 +100,7 @@ export class EnemyRenderer {
       ba[o] = c; ba[o + 1] = 0; ba[o + 2] = -sn; ba[o + 3] = 0; ba[o + 4] = 0; ba[o + 5] = sc; ba[o + 6] = 0; ba[o + 7] = 0; ba[o + 8] = sn; ba[o + 9] = 0; ba[o + 10] = c; ba[o + 11] = 0;
       ba[o + 12] = e.x[i] + e.vx[i] * ex; ba[o + 13] = (l.float ?? 0) + (l.float ? Math.sin(ph) * (l.bob ?? 0) : bob); ba[o + 14] = e.z[i] + e.vz[i] * ex; ba[o + 15] = 1;
       ga.set(ba.subarray(o, o + 16), o);
-      const f = e.hitFlash[i] > 0 ? 2.2 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = ca[n * 3 + 1] = ca[n * 3 + 2] = f;
+      const f = e.hitFlash[i] > 0 && e.hitFlash[i] <= 0.15 ? 1.8 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = ca[n * 3 + 1] = ca[n * 3 + 2] = f;
     }
     for (let k = 0; k < LOOKS.length; k++) {
       const n = this.counts[k]; for (const x of [this.body[k], this.glow[k]]) { x.count = n; x.instanceMatrix.needsUpdate = true; }
