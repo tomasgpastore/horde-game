@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { SimState, SimEvent, ArenaDef, ArenaHandle } from '@shared/types';
 import { EnemyRenderer, KIND_COLORS } from './enemies';
@@ -17,7 +18,7 @@ export class Renderer {
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
   setQuality(q: 'low' | 'med' | 'high') { this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
-  playerMesh: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
+  playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
@@ -31,12 +32,23 @@ export class Renderer {
     this.ringMesh.frustumCulled = false; this.scene.add(this.ringMesh);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), emissive(0x4de8ff), MAX_PICKUPS);
     for (const m of [this.projMesh, this.gemMesh]) { m.frustumCulled = false; this.scene.add(m); }
-    this.playerMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 0.8, 4, 8), new THREE.MeshLambertMaterial({ color: 0xffc857 }));
-    this.playerMesh.position.y = 0.8; this.playerMesh.castShadow = true; this.scene.add(this.playerMesh);
+    // Hero (procedural low-poly placeholder for Artist): cloaked wanderer with a floating cyan lantern that lights the ground.
+    this.playerMesh = new THREE.Group();
+    const fm = (c: number, em = 0) => new THREE.MeshLambertMaterial({ color: c, emissive: em, flatShading: true });
+    const cloak = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.4, 6), fm(0x1f6f86, 0x06222c)); cloak.position.y = 0.7;
+    const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), fm(0xffd9a0, 0x201408)); head.position.y = 1.55;
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.45, 6), fm(0xffc857, 0x3a2600)); hat.position.y = 1.9;
+    this.lantern = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ color: 0x7ff3ff })); this.lantern.position.set(0.7, 1.3, 0.2);
+    const light = new THREE.PointLight(0x6fe8ff, 18, 14, 1.6); light.position.copy(this.lantern.position);
+    this.playerMesh.add(cloak, head, hat, this.lantern, light); this.playerMesh.traverse(o => { if ((o as THREE.Mesh).isMesh && o !== this.lantern) o.castShadow = true; });
+    this.scene.add(this.playerMesh);
     this.pMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffffff }), Renderer.NP);
     this.pMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Renderer.NP * 3), 3); this.pMesh.frustumCulled = false; this.pMesh.count = 0; this.scene.add(this.pMesh);
     this.composer = new EffectComposer(this.three); this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.55, 0.55)); this.composer.addPass(new OutputPass());
+    this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.55, 0.55)); this.composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null }, amount: { value: 0.55 } },
+      vertexShader: 'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader: 'uniform sampler2D tDiffuse;uniform float amount;varying vec2 v;void main(){vec4 c=texture2D(tDiffuse,v);float d=distance(v,vec2(.5));c.rgb*=1.-smoothstep(.35,.85,d)*amount;gl_FragColor=c;}' }));
+    this.composer.addPass(new OutputPass());
     const onResize = () => { this.three.setSize(innerWidth, innerHeight, false); this.composer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); };
     addEventListener('resize', onResize); onResize();
   }
@@ -54,7 +66,7 @@ export class Renderer {
     }
   }
   render(s: SimState, dt: number, _alpha: number) {
-    const p = s.players[0]; this.playerMesh.position.set(p.x, 0.8, p.z); this.playerMesh.rotation.y = p.facing;
+    const p = s.players[0]; this.playerMesh.position.set(p.x, 0, p.z); this.playerMesh.rotation.y = p.facing; this.lantern.position.y = 1.3 + Math.sin(s.time * 3) * 0.08;
     this.shake = Math.max(0, this.shake - dt * 2.5); const sh = this.shake * this.shake * 0.5;
     this.camera.position.set(p.x + (Math.random() - 0.5) * sh, 16 + (Math.random() - 0.5) * sh * 0.5, p.z + 11 + (Math.random() - 0.5) * sh); this.camera.lookAt(p.x, 0, p.z);
     { let n = 0; for (let i = 0; i < Renderer.NP; i++) { if (this.pl[i] <= 0) continue; this.pl[i] -= dt; if (this.pl[i] <= 0) continue;
