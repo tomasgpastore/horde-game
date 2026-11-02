@@ -112,7 +112,7 @@ export class Game {
   dbg: HTMLElement | null = null; indicators = new Indicators(this.ui);
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
-    const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
+    const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000)); // clamp: rAF timestamps can precede `last` after a blocking fast-forward (negative dt blew up the camera) this.last = now;
     const me = this.sim.state.players[0];
     if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
     if (this.ctxLost) { this.last = now; return; } // GL context gone: nothing to draw, don't advance the sim
