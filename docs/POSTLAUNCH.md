@@ -10,6 +10,6 @@ Source: code audit of `main` against `docs/GDD.md` plus a headless autoplay run 
 | 4 | Wraith: blink / fade-in phase | Enemies #7 | `sim/systems/enemies.ts` + a new SimEvent in `shared/types.ts` for render | M |
 | 5 | Level-up reroll / banish (in Designer CARD_RULES, not wired) | UI style (level-up cards) | `sim/index.ts` (`choose`) + `content/upgrades.ts` + `ui` | M |
 | 6 | Meta shop: spend gold between runs (gold is counted, nothing to buy) | UI style (meta-upgrade shop) | new meta module (shell/localStorage) | L |
-| 7 | Boss fight feel: time-to-kill (autoplay run left the Stag at ~60% HP after ~200s) and elites crowding the boss. May be a bot artifact; needs a human check | Bosses | `sim/systems/boss.ts`, `elites.ts` (thin elites during boss) | S |
+| 7 | Elites keep spawning every ~40s during a boss fight and pile up around the boss. Fix: skip the elite spawn while `s.boss` is set (one line). (Boss time-to-kill concern from the stale live build is already fixed on main: boss-priority auto-aim, ttk 35-100s.) | Bosses / Elites | `sim/systems/elites.ts` | S |
 
 Dropped from the earlier list: chests / boss rewards chaining into cards is by design.
