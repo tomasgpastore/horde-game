@@ -109,7 +109,7 @@ export async function createTitle({ onFallback } = {}) {
   function setOffset() { const w = innerWidth, h = innerHeight; if (w / h > 1.2) camera.setViewOffset(w, h, -w * 0.24, 0, w, h); else camera.setViewOffset(w, h, 0, h * 0.2, w, h); camera.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
 
-  const dummy = new THREE.Object3D(); const V = new THREE.Vector3(); let t = 0, last = 0, raf = 0, on = false, zoom = 0, zoomTarget = 0, slow = 0, frames = 0, bloomOn = true;
+  const dummy = new THREE.Object3D(); const V = new THREE.Vector3(); let t = 0, last = 0, raf = 0, on = false, zoom = 0, zoomTarget = 0, frames = 0, bloomOn = true, acc = 0, win = 0, guardDone = false;
   const frame = (now) => {
     raf = requestAnimationFrame(frame); const dt = Math.min(0.1, (now - last) / 1000 || 0.016); last = now; t += dt;
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 3.5);
@@ -124,8 +124,8 @@ export async function createTitle({ onFallback } = {}) {
     eMesh.instanceMatrix.needsUpdate = true; uniforms.uTime.value = t;
     bloom.strength = 0.8 + zoom * 1.6;
     bloomOn ? composer.render() : renderer.render(scene, camera);
-    // perf guard: if the first 90 frames average >40ms, drop bloom; if still slow, give up (static CSS bg)
-    if (++frames <= 150 && frames > 30) { slow += dt > 0.04 ? 1 : 0; if (frames % 60 === 0 && slow > 40) { if (bloomOn) { bloomOn = false; slow = 0; frames = 30; } else { dispose(); onFallback?.(); } } }
+    // perf guard: after a short warm-up, sample 12-frame windows; avg frame >40ms => drop bloom, then give up (static CSS bg)
+    if (++frames > 10) { acc += dt; if (++win === 12) { const slow = acc / 12 > 0.04; acc = 0; win = 0; if (slow && !guardDone) { if (bloomOn) { bloomOn = false; frames = 6; } else { guardDone = true; dispose(); onFallback?.(); } } else if (frames > 60) guardDone = true; } }
   };
   const start = () => { if (on || document.hidden) return; on = true; last = performance.now(); raf = requestAnimationFrame(frame); };
   const stop = () => { on = false; cancelAnimationFrame(raf); };
