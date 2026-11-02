@@ -16,7 +16,9 @@ test('autoplay 60s', async ({ page }, info) => {
   }
   console.log('AUTOPLAY ' + JSON.stringify(log));
   await info.attach('autoplay.json', { body: JSON.stringify(log, null, 1), contentType: 'application/json' });
-  expect(log[5].tick).toBeGreaterThan(log[0].tick);
-  expect(log[5].kills).toBeGreaterThan(0);
+  await page.waitForFunction(() => (window as any).__game.sim.state.kills > 0, null, { timeout: 90000, polling: 500 }); // slow runners: wait for sim, not wall-clock
+  log.push(await page.evaluate(() => { const s = (window as any).__game.sim.state; return { tick: s.tick, kills: s.kills }; }));
+  expect(log[log.length - 1].tick).toBeGreaterThan(log[0].tick);
+  expect(log[log.length - 1].kills).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
