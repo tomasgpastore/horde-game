@@ -6,6 +6,7 @@ import { getArena } from '@world/index';
 import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
+import { Meta } from '../meta/progress';
 import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
@@ -52,7 +53,13 @@ export class Game {
     if (best >= 0) { const l = Math.sqrt(bd) || 1; inp.aimX = (e.x[best] - me.x) / l; inp.aimZ = (e.z[best] - me.z) / l; }
     else if (inp.moveX || inp.moveZ) { const l = Math.hypot(inp.moveX, inp.moveZ); inp.aimX = inp.moveX / l; inp.aimZ = inp.moveZ / l; }
   }
-  gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, kills: s.kills, time: s.time, victory, level: s.players[0].level, weapons: s.players[0].weapons.map(w => ({ id: w.id, level: w.level })) } })); }
+  meta = new Meta();
+  gameOver(victory: boolean) {
+    this.running = false; const s = this.sim.state, p = s.players[0];
+    const detail: any = { score: s.kills, kills: s.kills, time: s.time, victory, level: p.level, weapons: p.weapons.map(w => ({ id: w.id, level: w.level })) };
+    detail.records = this.meta.record(this.sim.arena.id, detail); // personal bests (see meta/progress.ts); shell shows NEW BEST from detail.records.broken
+    dispatchEvent(new CustomEvent('game:over', { detail }));
+  }
   /** ?autoplay=1 debug bot (trailer capture): kites away from the horde's centre of mass; invulnerable; auto-picks cards. */
   autoplay = new URLSearchParams(location.search).get('autoplay') === '1'; private botT = 0;
   bot(me: { x: number; z: number }): PlayerInput {
