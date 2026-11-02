@@ -26,13 +26,13 @@ export class Renderer {
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
   setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
-  occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
+  occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; bladeMesh!: THREE.InstancedMesh; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
     this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
     this.arena = def.build(this.scene); buildBoundary(this.scene, def);
-    this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene);
+    this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene); { const bg = new THREE.OctahedronGeometry(0.5, 0); bg.scale(0.5, 0.12, 1.5); this.bladeMesh = new THREE.InstancedMesh(bg, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbff6ff).multiplyScalar(3), toneMapped: false }), 64); this.bladeMesh.frustumCulled = false; this.bladeMesh.count = 0; this.scene.add(this.bladeMesh); }
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
     this.occ = new OccluderFader(this.scene);
@@ -106,20 +106,21 @@ export class Renderer {
     if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(s.time * 18)); }
     T = this.lap('particles', T);
     this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0; T = this.lap('enemies', T);
-    n = 0; let rn = 0, tn = 0, ln = 0; const pr = s.projectiles; this.vfx.zapBegin(); let lx = 0, lz = 0, ll = -1;
+    n = 0; let rn = 0, tn = 0, ln = 0, bn = 0; const pr = s.projectiles; this.vfx.zapBegin(); let lx = 0, lz = 0, ll = -1;
     for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
       const k = pr.kind[i];
-      if (k === 3) { if (ll >= 0 && Math.abs(pr.life[i] - ll) < 0.03 && Math.hypot(pr.x[i] - lx, pr.z[i] - lz) < 9) this.vfx.zap(lx, lz, pr.x[i], pr.z[i]); lx = pr.x[i]; lz = pr.z[i]; ll = pr.life[i]; }
-      else if (k === 1 && (this.trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
+      if (k === 3) { if (pr.life[i] > 0.1) this.vfx.ring(pr.x[i], pr.z[i], 0xcfefff, 1.1, 0.14, 0.9); if (ll >= 0 && Math.abs(pr.life[i] - ll) < 0.03 && Math.hypot(pr.x[i] - lx, pr.z[i] - lz) < 9) this.vfx.zap(lx, lz, pr.x[i], pr.z[i]); lx = pr.x[i]; lz = pr.z[i]; ll = pr.life[i]; }
+      else if (k === 1) { if ((this.trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
+        const pp = s.players[0]; this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, Math.atan2(pr.x[i] - pp.x, pr.z[i] - pp.z) + Math.PI / 2, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.bladeMesh.setMatrixAt(bn++, this.m.matrix); continue; }
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       if (k === 4) { const f = Math.min(1, pr.life[i] / 0.6), r = pr.vx[i] * (0.75 + 0.25 * f) * (1 + 0.06 * Math.sin(s.time * 9 + i)); this.m.position.set(pr.x[i], 0.05, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.lavaMesh.setMatrixAt(ln, this.m.matrix);
         this.flashColor.setHex(0xff4a14).multiplyScalar(1.2 + 1.4 * f); this.lavaMesh.setColorAt(ln++, this.flashColor); continue; }
       if (k === 0) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]);
         this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
         this.flashColor.setHex(0xffd35a).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
-      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
+      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 0.9 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : k === 5 ? 0xd9a8ff : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
-    this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
+    this.bladeMesh.count = bn; this.bladeMesh.instanceMatrix.needsUpdate = true; this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
     this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
     this.lavaMesh.count = ln; this.lavaMesh.instanceMatrix.needsUpdate = true; if (this.lavaMesh.instanceColor) this.lavaMesh.instanceColor.needsUpdate = true;
