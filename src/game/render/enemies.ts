@@ -72,7 +72,7 @@ function build(parts: Part[]): G {
 export const KIND_COLORS = LOOKS.map(l => l.glow);
 export class EnemyRenderer {
   private body: THREE.InstancedMesh[] = []; private glow: THREE.InstancedMesh[] = [];
-  private counts = new Int32Array(LOOKS.length); private m = new THREE.Object3D(); private c = new THREE.Color();
+  private counts = new Int32Array(LOOKS.length);
   constructor(scene: THREE.Scene) {
     LOOKS.forEach((l, k) => {
       const bm = new THREE.InstancedMesh(build(l.parts), new THREE.MeshLambertMaterial({ color: l.body, flatShading: true, emissive: l.glow, emissiveIntensity: 0.07 }), MAX_ENEMIES);
@@ -82,16 +82,19 @@ export class EnemyRenderer {
       bm.castShadow = k !== 1; this.body.push(bm); this.glow.push(gm);
     });
   }
-  update(e: EnemyPool, t: number) {
-    this.counts.fill(0); const m = this.m;
+  /** Hot path: raw matrix writes (no Object3D), extrapolated by ex seconds. Body+glow share the matrix. */
+  update(e: EnemyPool, t: number, ex = 0) {
+    this.counts.fill(0);
     for (let i = 0; i < e.count; i++) {
       if (!e.alive[i]) continue;
       const k = e.kind[i] < LOOKS.length ? e.kind[i] : 0, l = LOOKS[k], n = this.counts[k]++;
       const ph = t * (l.float ? 3 : 9) + i * 1.7, bob = Math.abs(Math.sin(ph)) * (l.bob ?? 0);
-      m.position.set(e.x[i], (l.float ?? 0) + (l.float ? Math.sin(ph) * (l.bob ?? 0) : bob), e.z[i]);
-      m.rotation.set(0, e.facing[i], l.float ? 0 : Math.sin(ph) * 0.08); m.scale.setScalar(l.scale ?? 1); m.updateMatrix();
-      this.body[k].setMatrixAt(n, m.matrix); this.glow[k].setMatrixAt(n, m.matrix);
-      const f = e.hitFlash[i] > 0 ? 4 : 1; this.c.setRGB(f, f, f); this.body[k].setColorAt(n, this.c);
+      const sc = l.scale ?? 1, c = Math.cos(e.facing[i]) * sc, sn = Math.sin(e.facing[i]) * sc, o = n * 16;
+      const ba = this.body[k].instanceMatrix.array as Float32Array, ga = this.glow[k].instanceMatrix.array as Float32Array;
+      ba[o] = c; ba[o + 1] = 0; ba[o + 2] = -sn; ba[o + 3] = 0; ba[o + 4] = 0; ba[o + 5] = sc; ba[o + 6] = 0; ba[o + 7] = 0; ba[o + 8] = sn; ba[o + 9] = 0; ba[o + 10] = c; ba[o + 11] = 0;
+      ba[o + 12] = e.x[i] + e.vx[i] * ex; ba[o + 13] = (l.float ?? 0) + (l.float ? Math.sin(ph) * (l.bob ?? 0) : bob); ba[o + 14] = e.z[i] + e.vz[i] * ex; ba[o + 15] = 1;
+      ga.set(ba.subarray(o, o + 16), o);
+      const f = e.hitFlash[i] > 0 ? 4 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = ca[n * 3 + 1] = ca[n * 3 + 2] = f;
     }
     for (let k = 0; k < LOOKS.length; k++) {
       const n = this.counts[k]; for (const x of [this.body[k], this.glow[k]]) { x.count = n; x.instanceMatrix.needsUpdate = true; }
