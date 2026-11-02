@@ -18,8 +18,9 @@ const num = (n: unknown) => (typeof n === 'number' && isFinite(n) && n >= 0 ? n 
 
 export class Meta {
   private s: Store;
+  private _last: Records | null = null;
   /** Result of the most recent record() call, or null. */
-  last: Records | null = null;
+  get last(): Records | null { return this._last; }
   constructor(private storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null) { this.s = this.load(); }
   private load(): Store {
     try {
@@ -30,7 +31,7 @@ export class Meta {
   }
   private save() { try { this.storage?.setItem(KEY, JSON.stringify(this.s)); } catch { /* private mode / quota */ } }
 
-  /** Record a finished run; returns which personal bests it broke. Dispatches 'meta:best' on window when any were broken. */
+  /** Record a finished run; returns which personal bests it broke. Dispatches one window 'meta:best' {kind,value,prev,arena} per stat that beat a previous best. */
   record(arena: string, r: RunResult): Records {
     const run: RunResult = { kills: num(r.kills), time: num(r.time), level: num(r.level), victory: !!r.victory, weapons: (r.weapons ?? []).map(w => ({ id: String(w.id), level: num(w.level) })) };
     const old = this.s.arenas[arena] ?? null, prev = old ? { ...old } : null;
@@ -41,12 +42,12 @@ export class Meta {
     this.s.arenas[arena] = best;
     this.s.recent.unshift({ ...run, arena, at: Date.now() }); this.s.recent.length = Math.min(this.s.recent.length, MAX_RECENT);
     this.save();
-    this.last = { arena, broken, first: !old, prev, best: { ...best } };
-    if (broken.length && typeof dispatchEvent === 'function') dispatchEvent(new CustomEvent('meta:best', { detail: this.last }));
-    return this.last;
+    const rec: Records = this._last = { arena, broken, first: !old, prev, best: { ...best } };
+    if (typeof dispatchEvent === 'function') for (const kind of broken) dispatchEvent(new CustomEvent('meta:best', { detail: { kind, value: best[kind], prev: prev![kind], arena } }));
+    return rec;
   }
   bests(arena: string): ArenaBest | null { const b = this.s.arenas[arena]; return b ? { ...b } : null; }
   /** Newest first, max 10. */
   recent(): RunRecord[] { return this.s.recent.map(r => ({ ...r })); }
-  clear() { this.s = empty(); this.last = null; this.save(); }
+  clear() { this.s = empty(); this._last = null; this.save(); }
 }

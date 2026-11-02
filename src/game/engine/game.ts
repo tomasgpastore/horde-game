@@ -53,7 +53,7 @@ export class Game {
     if (best >= 0) { const l = Math.sqrt(bd) || 1; inp.aimX = (e.x[best] - me.x) / l; inp.aimZ = (e.z[best] - me.z) / l; }
     else if (inp.moveX || inp.moveZ) { const l = Math.hypot(inp.moveX, inp.moveZ); inp.aimX = inp.moveX / l; inp.aimZ = inp.moveZ / l; }
   }
-  meta = new Meta();
+  readonly meta = new Meta(); // read-only API for shell/QA: bests(arena), recent(), last; clear() is for tests
   gameOver(victory: boolean) {
     this.running = false; const s = this.sim.state, p = s.players[0];
     const detail: any = { score: s.kills, kills: s.kills, time: s.time, victory, level: p.level, weapons: p.weapons.map(w => ({ id: w.id, level: w.level })) };
