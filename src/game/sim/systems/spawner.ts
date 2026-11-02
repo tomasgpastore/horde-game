@@ -1,5 +1,6 @@
 import type { System } from '../system';
 import { alloc } from '../pools';
+import { enemyDef } from '../content/enemies';
 import { MAX_ENEMIES } from '@shared/types';
 import type { SimState } from '@shared/types';
 import { waveFor, waveAt, WAVE_SECONDS, ARENA_BOSS } from '@world/waves';
@@ -9,7 +10,7 @@ interface Acc { budget: number; nextSurge: number; lastWave: number; boss: boole
 const acc = new WeakMap<SimState, Acc>();
 export const SPAWN_DIST = 24;
 
-export const spawnHp = (kind: number, wave: number) => (6 + kind * 8) * (1 + wave * 0.12);
+export const spawnHp = (kind: number, wave: number) => enemyDef(kind).hp * (1 + wave * 0.12);
 
 function spawnOne(s: SimState, kind: number, x: number, z: number): boolean {
   const e = s.enemies, i = alloc(e.alive, e.count, MAX_ENEMIES);
