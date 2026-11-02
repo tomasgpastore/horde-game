@@ -79,6 +79,7 @@ export class Renderer {
       if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
       else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
       else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
+      else if (e.t === 'telegraph') this.vfx.ring(e.x, e.z, 0xff3a3a, 2.4, 0.6);
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
       else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); this.vfx.bossDeath(e.x, e.z, BOSS_COLORS[e.bossId as keyof typeof BOSS_COLORS] ?? 0xff3355); this.burst(e.x, e.z, 60, 0xffd35a, 18); }
       else if (e.t === 'levelUp') { this.rig.addTrauma(0.2); this.slowmo = 0.6; this.vfx.levelUp(this.playerMesh.position.x, this.playerMesh.position.z); this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9); }

@@ -62,6 +62,7 @@ export type SimEvent =
   | { t: 'evolve'; id: number; weapon: string }         // weapon reached max level (evolution moment)
   | { t: 'bossTelegraph'; x: number; z: number; dx: number; dz: number; windup: number; bossId: string } // charge wind-up starts (red lane); VFX/audio cue
   | { t: 'bossSlam'; x: number; z: number; bossId: string }                                              // charge ends / impact
+  | { t: 'telegraph'; x: number; z: number; kind: number }                                             // an enemy is winding up an attack (spitter: red ring)
   | { t: 'biome'; next: string }                        // boss of this biome died: client swaps arena after the reward card
   | { t: 'gameOver'; victory: boolean };
 
