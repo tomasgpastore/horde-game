@@ -37,7 +37,7 @@ export function waveFor(wave: number): WaveDef {
   const w = Math.max(1, wave);
   return {
     wave: w,
-    rate: (3.0 + w * 1.6 + Math.pow(w, 1.5) * 0.3) * EARLY_MUL[Math.min(w, EARLY_MUL.length) - 1],
+    rate: (3.0 + w * 1.6 + Math.pow(w, 1.5) * 0.3) * EARLY_MUL[Math.min(w, EARLY_MUL.length) - 1] * (w >= 10 ? 0.88 : 1), // small dip after 6:00 so bosses 2/3 stay reachable
     cap: Math.min(limits.maxAlive, capAt(w * WAVE_SECONDS)),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
     surge: { every: 26, count: 8 + w * 3 }, // first ring at 14s (nextSurge), from wave 1 (Designer #84)
