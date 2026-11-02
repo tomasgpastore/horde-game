@@ -23,7 +23,8 @@ const CSS = `.hud-top,.xpbar{display:none!important}.boss{top:76px!important}.ge
 .tb-kills svg{width:22px;height:22px;filter:drop-shadow(0 0 5px #ff6a2b)}
 .tb-dbg{position:absolute;right:20px;top:104px;font:600 12px monospace;color:#9fe8ff99}
 .tb-vig{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(255,30,60,.55) 100%);transition:opacity .25s}
-.tb-vig.on{opacity:1;animation:vigp 1s ease-in-out infinite}@keyframes vigp{50%{opacity:.45}}`;
+.tb-vig.on{opacity:1;animation:vigp 1s ease-in-out infinite}@keyframes vigp{50%{opacity:.45}}
+@media (max-height:440px){.tb-segs i{width:12px;height:12px}.tb-segs{gap:2px;padding:3px}.tb-time{font-size:30px;top:6px}.tb-hpn{font-size:12px;min-width:44px}.tb-hp{left:70px;top:22px}.tb-kills{top:56px;font-size:18px}}`; // last: landscape phones get a compact HUD, timer clear of the HP bar
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21C5 15 2 11.5 2 8a5 5 0 0 1 10-1.5A5 5 0 0 1 22 8c0 3.500-3 7-10 13z" fill="#ff3355" stroke="#ffd0d8" stroke-width="1.2"/></svg>';
 const SKULL = '<svg viewBox="0 0 24 24"><path d="M12 2C6.500 2 3 6 3 10.500c0 3 1.500 4.500 3 5.500V20h3v-2h2v2h2v-2h2v2h3v-4c1.500-1 3-2.500 3-5.500C21 6 17.500 2 12 2z" fill="#ffe3d0"/><circle cx="8.500" cy="11" r="2.200" fill="#2a0a0a"/><circle cx="15.500" cy="11" r="2.200" fill="#2a0a0a"/></svg>';
 const SEGS = 10;
