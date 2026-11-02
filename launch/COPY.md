@@ -29,12 +29,12 @@ EMBERHORDE is a fast, 3D low-poly horde-survivor roguelite. Move, dash, and let 
 - **6 evolutions** – at level 8, pair each weapon with its matching passive and it evolves.
 - **Elites and chests** – an elite hunts you every 40 seconds from 0:50; kill it for a chest.
 - **3 biomes, 3 bosses** – fight through Ashen Woods, the Drowned Cathedral and the Void Garden. The Hollow Stag, the Bell-Warden and The Unlit each guard a biome; beat a boss and the run carries on into the next.
-- **~15-minute runs** – a full run ends in victory after The Unlit.
+- **15+ minute runs** – a full run ends in victory after The Unlit.
 - **Escalating chaos** – dozens become hundreds on screen.
 - **Short, replayable runs** – one more try, always.
 - **Solo only** – no co-op or multiplayer.
 
-(Verified live: biome chaining from Ashen Woods into the Drowned Cathedral, all three boss arenas. No meta shop; solo only.)
+(Verified live: chained Ashen Woods → Drowned Cathedral → Void Garden → victory card (autoplay run, ~20 min game time). No meta shop; solo only.)
 
 ## Controls (confirm with Gameplay Engineer)
 WASD / arrows to move · mouse to aim (auto-aim on touch/gamepad) · Space to dash · E ability · Esc or P to pause · gamepad: left stick move, right stick aim, A/RB dash · touch joystick + dash button on mobile
