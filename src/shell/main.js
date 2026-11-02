@@ -2,8 +2,8 @@ import './shell.css';
 const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
 const root = document.getElementById('shell');
 const DEF = { volume: 0.8, music: 0.7, sfx: 0.9, quality: 'med', shake: true };
-let settings = { ...DEF, ...JSON.parse(localStorage.getItem('hf-settings') || '{}') };
-const save = () => localStorage.setItem('hf-settings', JSON.stringify(settings));
+let settings = { ...DEF, ...JSON.parse(localStorage.getItem('eh-settings') || '{}') };
+const save = () => localStorage.setItem('eh-settings', JSON.stringify(settings));
 const input = { move: { x: 0, y: 0 }, touch: matchMedia('(pointer:coarse)').matches };
 if (input.touch) document.body.classList.add('touch');
 window.__input = input;
@@ -14,8 +14,8 @@ const mk = (cls, html) => { const e = $(`<div class="screen ${cls}">${html}</div
 const show = (...s) => { for (const e of Object.values(screens)) e.classList.add('hidden'); s.forEach(e => screens[e].classList.remove('hidden')); };
 
 const screens = {
-  loading: mk('', `<h1>HORDEFALL</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div>`),
-  menu: mk('hidden', `<h1>HORDEFALL</h1><p class="tag">Survive the night</p>
+  loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div>`),
+  menu: mk('hidden', `<h1>EMBERHORDE</h1><p class="tag">Survive the night</p>
     <button class="btn primary" data-a="play">Play</button><button class="btn" data-a="coop">Co-op</button>
     <button class="btn" data-a="settings">Settings</button><button class="btn" data-a="credits">Credits</button>
     <div class="hints" id="hints"></div>`),
@@ -29,7 +29,7 @@ const screens = {
   credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Assets: see in-repo CREDITS.md.</p><button class="btn" data-a="back">Back</button></div>`),
   pause: mk('hidden clear', `<h2>Paused</h2><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="psettings">Settings</button><button class="btn" data-a="quit">Quit to menu</button>`),
   over: mk('hidden clear', `<h1 style="font-size:64px">You fell</h1><p class="tag" id="score"></p><button class="btn primary" data-a="play">Try again</button><button class="btn" data-a="quit">Menu</button>`),
-  nogl: mk('hidden', `<h1>HORDEFALL</h1><p class="err">Your browser can't run WebGL, which this game needs. Try a recent Chrome, Firefox, Edge or Safari, and make sure hardware acceleration is enabled.</p>`),
+  nogl: mk('hidden', `<h1>EMBERHORDE</h1><p class="err">Your browser can't run WebGL, which this game needs. Try a recent Chrome, Firefox, Edge or Safari, and make sure hardware acceleration is enabled.</p>`),
 };
 const pauseBtn = $('<button id="pausebtn" aria-label="Pause">❚❚</button>'); root.appendChild(pauseBtn);
 const stick = $('<div id="stick"><b></b></div>'); root.appendChild(stick);
