@@ -23,7 +23,7 @@ export class BossView {
     const hpLost = Math.min(1, Math.max(0, 1 - e.hp[i] / b.maxHp)), tele = b.mode === 1 ? Math.min(1, b.t / d.windup) : b.mode === 2 ? 1 : 0;
     { const c = BOSS_COLORS[b.id as BossId] ?? 0xff3355, pulse = 0.75 + 0.25 * Math.sin(s.time * 3), R = this.cur.boss.radius * 2.2 * (1 + tele * 0.12);
       this.aura.visible = true; this.aura.position.x = e.x[i]; this.aura.position.z = e.z[i]; this.aura.scale.set(R, R, 1);
-      (this.disc.material as THREE.MeshBasicMaterial).color.setHex(c).multiplyScalar(0.16 * pulse * (1 + tele)); (this.ring.material as THREE.MeshBasicMaterial).color.setHex(c).multiplyScalar(0.9 * pulse); }
+      (this.disc.material as THREE.MeshBasicMaterial).color.setHex(c).multiplyScalar(0.26 * pulse * (1 + tele)); (this.ring.material as THREE.MeshBasicMaterial).color.setHex(c).multiplyScalar(1.4 * pulse); }
     this.cur.boss.update(s.time, hpLost, tele); this.cur.boss.flash(e.hitFlash[i] > 0);
   }
 }
