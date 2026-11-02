@@ -38,3 +38,26 @@ test('boss / hurt / dash / death paths fire sounds, switch theme, no errors', as
   expect(duck).toBeLessThan(1); // telegraph ducks the music right after bossSpawn
   expect(errors).toEqual([]);
 });
+
+test('menu buttons fire UI sounds + stinger via real clicks; freeze is hit-stop, evolve plays sting', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?autoplay=1'); await hook(page);
+  await page.evaluate(() => { const w = window as any, s = w.__audio.sfx, o = s.play.bind(s); w.T = {}; s.play = (n: string, p: any) => { w.T[n] = (w.T[n] || 0) + 1; return o(n, p); }; });
+  await page.click('button[data-a=settings]'); // first gesture: unlock (+ click sfx)
+  await page.waitForFunction(() => (window as any).__audio.audio.ctx?.state === 'running');
+  await page.locator('button[data-a=back]:visible').click();
+  await page.hover('button[data-a=credits]'); await page.click('button[data-a=credits]'); await page.locator('button[data-a=back]:visible').click();
+  await page.click('button[data-a=play]');
+  await page.waitForFunction(() => (window as any).__game?.sim?.state?.tick > 30);
+  const emit = (ev: any[]) => page.evaluate((ev) => { const g = (window as any).__game; g.audio.consume(ev, g.sim.state); }, ev);
+  const U = await page.evaluate(() => (window as any).T);
+  expect(U.ui_hover).toBeGreaterThan(0); expect(U.ui_click).toBeGreaterThan(0); expect(U.ui_back).toBeGreaterThan(0); expect(U.stinger).toBeGreaterThan(0);
+  await page.evaluate(() => { (window as any).T = {}; });
+  await emit([{ t: 'freeze', ms: 120 }, { t: 'slow', scale: 0.3, secs: 0.4 }]);
+  await emit([{ t: 'evolve', id: 0, weapon: 'ember_bolt' }]);
+  const T = await page.evaluate(() => (window as any).T);
+  expect(T.freeze).toBeUndefined();          // hit-stop must not trigger the ice tick
+  expect(T.evolve).toBeGreaterThan(0);       // evolve sting
+  expect(T.levelup).toBeUndefined();
+  expect(errors).toEqual([]);
+});
