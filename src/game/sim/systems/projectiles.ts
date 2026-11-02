@@ -3,6 +3,7 @@ import { alloc } from '../pools';
 import { MAX_PICKUPS, MAX_PROJECTILES } from '@shared/types';
 import { head, next, CELL, cellX, DIM } from './grid';
 import { enemyDef } from '../content/enemies';
+import { enemyRadius } from '../radius';
 
 const lastHit = new Int16Array(MAX_PROJECTILES).fill(-1);
 export const resetHit = (i: number) => { lastHit[i] = -1; };
@@ -29,7 +30,7 @@ export const projectileSystem: System = { name: 'projectiles', update(s, c) {
       const cx = gx + ox, cz = gz + oz; if (cx < 0 || cz < 0 || cx >= DIM || cz >= DIM) continue;
       for (let j = head[cz * DIM + cx]; j >= 0; j = next[j]) {
         if (!e.alive[j] || j === lastHit[i]) continue;
-        const def = enemyDef(e.kind[j]), dx = e.x[j] - pr.x[i], dz = e.z[j] - pr.z[i], r = def.radius + PR;
+        const def = enemyDef(e.kind[j]), dx = e.x[j] - pr.x[i], dz = e.z[j] - pr.z[i], r = enemyRadius(s, j) + PR;
         if (dx * dx + dz * dz > r * r) continue;
         const crit = c.rng.next() < 0.1 + (s.players[pr.owner[i]]?.stats.luck ?? 0), dmg = pr.dmg[i] * (crit ? 2 : 1);
         e.hp[j] -= dmg; e.hitFlash[j] = 0.1; lastHit[i] = j;

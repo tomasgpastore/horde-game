@@ -1,6 +1,7 @@
 import type { System } from '../system';
 import { ENEMY_SCALING } from '../content/balance';
 import { enemyDef } from '../content/enemies';
+import { enemyRadius } from '../radius';
 import { head, next, cellX, DIM } from './grid';
 import { SPITTER, HOLD, spitTele } from './spitters';
 /** Chase nearest living player, light separation via grid, contact damage with i-frames, death → gameOver. */
@@ -22,7 +23,7 @@ export const enemySystem: System = { name: 'enemies', update(s, c) {
     const sp = e.kind[i] === SPITTER ? (spitTele[i] > 0 || d < HOLD ? 0 : def.speed) : def.speed; // spitters hold position at range and while winding up
     e.vx[i] = dx / d * sp * speedMult + sx * 3; e.vz[i] = dz / d * sp * speedMult + sz * 3;
     e.x[i] += e.vx[i] * c.dt; e.z[i] += e.vz[i] * c.dt; e.facing[i] = Math.atan2(dx, dz);
-    if (!tgt.dead && d < def.radius + 0.4 && tgt.iframes <= 0) {
+    if (!tgt.dead && d < enemyRadius(s, i) + 0.4 && tgt.iframes <= 0) {
       const dmg = Math.max(1, def.dmg * dmgMult * (e.flags[i] & 1 ? 1.25 : 1) - (tgt.stats.armor ?? 0)); tgt.hp -= dmg; tgt.iframes = 0.6; s.events.push({ t: 'playerHurt', id: tgt.id, dmg }, { t: 'freeze', ms: 50 });
       if (tgt.hp <= 0) { tgt.dead = true; tgt.hp = 0; }
     }
