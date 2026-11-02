@@ -6,9 +6,11 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 
 ▶ **Play: https://emberhorde.fly.dev**
 
+![EMBERHORDE gameplay](docs/hero.gif)
+
 ## Features
 - 6 weapons: Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears
-- Weapons evolve at level 8 when paired with the right passive
+- 6 weapon evolutions: at level 8, pair a weapon with its passive
 - Elites every 40s (from 0:50) that drop chests
 - A boss at 5:00 (the Hollow Stag)
 - Solo only (no co-op)
