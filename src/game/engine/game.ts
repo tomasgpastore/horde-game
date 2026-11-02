@@ -26,9 +26,9 @@ export class Game {
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
   choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
-  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); }
+  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); audio.resume(); this.audio.startRun(); }
   pause() { this.paused = true; audio.suspend(); } resume() { this.paused = false; this.last = performance.now(); audio.resume(); }
-  quit() { this.running = false; this.paused = false; this.reset(); }
+  quit() { this.running = false; this.paused = false; this.reset(); audio.resume(); this.audio.stop(); } // un-suspend (Quit while paused) and clear run music; shell then plays the title theme
   applySettings(s: Settings) {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
