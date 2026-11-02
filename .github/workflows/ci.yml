@@ -79,4 +79,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: playwright-slow-${{ matrix.shard }}, path: test-results, retention-days: 14 }
+        with:
+          name: playwright-slow-${{ matrix.shard }}
+          path: test-results
+          retention-days: 14
