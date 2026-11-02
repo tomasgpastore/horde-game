@@ -14,7 +14,7 @@ export type SfxName =
   | 'fire_bolt' | 'fire_whip' | 'fire_orb' | 'fire_nova' | 'fire_arrow' | 'fire_lightning' | 'fire_flame'
   | 'boss_telegraph' | 'boss_slam' | 'boss_roar'
   | 'ui_click' | 'ui_hover' | 'ui_card' | 'ui_back' | 'chest' | 'dash'
-  | 'crunch' | 'freeze' | 'evolve' | 'heartbeat';
+  | 'crunch' | 'freeze' | 'evolve' | 'heartbeat' | 'stinger';
 
 export interface PlayOpts { pitch?: number; volume?: number; pan?: number; /** batch size for crunch */ count?: number; }
 export type MusicName = 'title' | 'battle' | 'boss';
@@ -31,17 +31,26 @@ const LIMITS: Record<SfxName, [number, number, number]> = {
   fire_lightning: [3, 80, 2], fire_flame: [2, 90, 1],
   boss_telegraph: [1, 400, 5], boss_slam: [2, 200, 6], boss_roar: [1, 500, 5],
   ui_click: [3, 30, 3], ui_hover: [2, 40, 2], ui_card: [2, 100, 3], ui_back: [2, 60, 3], chest: [1, 300, 4], dash: [2, 120, 2],
-  crunch: [3, 25, 2], freeze: [2, 70, 2], evolve: [1, 800, 7], heartbeat: [2, 200, 4],
+  crunch: [3, 25, 2], freeze: [2, 70, 2], evolve: [1, 800, 7], heartbeat: [2, 200, 4], stinger: [1, 800, 6],
 };
 /** Per-sound output trim (linear), calibrated by tools/audio-demo/verify.mjs so peaks land at the target level. */
-export const SFX_TRIM: Partial<Record<SfxName, number>> = {"hit":6.837,"kill":2.801,"gem":3.993,"levelup":1.008,"hurt":3.681,"death":0.638,"fire_bolt":7.635,"fire_whip":0.465,"fire_orb":2.219,"fire_nova":1.7,"fire_arrow":7.494,"fire_lightning":0.597,"fire_flame":2.969,"boss_telegraph":1.975,"boss_slam":1.058,"boss_roar":2.407,"ui_click":6.97,"ui_hover":11.23,"ui_card":1.323,"ui_back":11.055,"chest":1.481,"dash":4.195,"crunch":2.943,"freeze":5.213,"evolve":1.015,"heartbeat":2.722};
+export const SFX_TRIM: Partial<Record<SfxName, number>> = {"hit":6.837,"kill":2.801,"gem":3.993,"levelup":1.4,"hurt":3.681,"death":0.638,"fire_bolt":7.635,"fire_whip":0.465,"fire_orb":2.219,"fire_nova":1.7,"fire_arrow":7.494,"fire_lightning":0.597,"fire_flame":2.969,"boss_telegraph":1.975,"boss_slam":1.058,"boss_roar":2.407,"ui_click":6.97,"ui_hover":11.23,"ui_card":1.323,"ui_back":11.055,"chest":1.481,"dash":4.195,"crunch":2.943,"freeze":5.213,"evolve":1.015,"heartbeat":2.722,"stinger":0.363};
 /** Per-theme music trim, calibrated so loop RMS ~ -20 dBFS at default sliders. */
 export const MUSIC_TRIM: Record<string, number> = { title: 1.527, battle: 0.838, boss: 0.646 };
 const MAX_VOICES = 36;
+/** "Swarm" sounds (spammed by hordes) route through a bus that is sidechain-ducked by important sounds. */
+const SWARM = new Set<SfxName>(['hit', 'kill', 'crunch', 'fire_bolt', 'fire_whip', 'fire_orb', 'fire_nova', 'fire_arrow', 'fire_lightning', 'fire_flame', 'dash']);
+/** important sound -> [swarm gain while it plays, hold seconds] */
+const SWARM_BASE = 0.5; // horde sounds sit ~6dB under the important ones
+const DUCK: Partial<Record<SfxName, [number, number]>> = {
+  levelup: [0.12, 1.2], gem: [0.6, 0.12], hurt: [0.4, 0.35], evolve: [0.25, 1.4], chest: [0.35, 0.7], death: [0.3, 1.5],
+  boss_telegraph: [0.35, 0.9], boss_slam: [0.3, 0.8], boss_roar: [0.4, 0.9], ui_card: [0.4, 0.4], stinger: [0.3, 1.0],
+};
 
 class AudioEngine {
   ctx: AudioContext | null = null;
   offline = false;
+  swarmBus!: GainNode;
   musicDuck!: GainNode; musicLpf!: BiquadFilterNode;
   master!: GainNode; musicBus!: GainNode; sfxBus!: GainNode; comp!: DynamicsCompressorNode;
   noiseBuf!: AudioBuffer;
@@ -67,6 +76,7 @@ class AudioEngine {
     limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.05;
     this.master = ctx.createGain(); this.musicBus = ctx.createGain(); this.sfxBus = ctx.createGain();
     this.musicDuck = ctx.createGain(); this.musicLpf = ctx.createBiquadFilter(); this.musicLpf.type = 'lowpass'; this.musicLpf.frequency.value = 20000; this.musicLpf.Q.value = 0.5;
+    this.swarmBus = ctx.createGain(); this.swarmBus.gain.value = SWARM_BASE; this.swarmBus.connect(this.sfxBus);
     this.musicBus.connect(this.musicDuck); this.musicDuck.connect(this.musicLpf); this.musicLpf.connect(this.comp); this.sfxBus.connect(this.comp);
     this.comp.connect(this.master); this.master.connect(limiter); limiter.connect(ctx.destination);
     this.applyVolumes();
@@ -127,7 +137,9 @@ class Sfx {
     const crowd = prio <= 1 ? 1 / (1 + this.voices.length * 0.045) : 1;
     const out = ctx.createGain(); let node: AudioNode = out;
     if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); out.connect(p); node = p; }
-    node.connect(audio.sfxBus);
+    node.connect(SWARM.has(name) ? audio.swarmBus : audio.sfxBus);
+    const dk = DUCK[name];
+    if (dk) { const g = audio.swarmBus.gain; g.cancelScheduledValues(now); g.setTargetAtTime(dk[0] * SWARM_BASE, now, 0.01); g.setTargetAtTime(SWARM_BASE, now + dk[1], 0.15); }
     const nodes: AudioScheduledSourceNode[] = [];
     const rv = 0.94 + Math.random() * 0.12; // humanize
     let pitch = (o.pitch ?? 1) * rv;
@@ -232,6 +244,12 @@ const SYN: Record<SfxName, (c: SC) => number> = {
     [0, 7, 12, 16, 19, 24].forEach((s, i) => { const f = mtof(57 + s); osc(c, 'sawtooth', f, f, 1.4, 0.1, i * 0.09); osc(c, 'triangle', f * 2, f * 2, 1.2, 0.09, i * 0.09); });
     osc(c, 'sine', 90, 35, 1.2, 0.6); noise(c, 'bandpass', 200, 6000, 1.1, 0.35, 0, 1.2, 0.5); noise(c, 'highpass', 6000, 9000, 1.2, 0.12, 0.5, 1, 0.1);
     osc(c, 'square', mtof(81), mtof(81), 1.6, 0.06, 0.55); return 2.1;
+  },
+  // PLAY click: rising whoosh into a low boom, lined up with the title whiteout (white at ~250ms, full at ~800ms)
+  stinger(c) {
+    noise(c, 'bandpass', 250, 6000, 0.62, 0.55, 0, 1.5, 0.5); osc(c, 'sawtooth', 70, 240, 0.6, 0.12, 0, 'exp');
+    osc(c, 'sine', 95, 32, 1.0, 0.95, 0.6); osc(c, 'triangle', 190, 60, 0.5, 0.25, 0.6);
+    noise(c, 'lowpass', 1800, 90, 0.9, 0.55, 0.6, 0.7, 0.01); noise(c, 'highpass', 5000, 9000, 0.35, 0.12, 0.62); return 1.6;
   },
   heartbeat(c) { osc(c, 'sine', 70, 38, 0.16, 0.9); osc(c, 'sine', 62, 36, 0.2, 0.7, 0.2); noise(c, 'lowpass', 220, 80, 0.12, 0.2); return 0.45; },
   dash(c) { noise(c, 'bandpass', 600, 3000, 0.15, 0.3, 0, 1.2, 0.03); return 0.18; },

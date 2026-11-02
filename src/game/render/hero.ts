@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addRim } from './rim';
 
 /** Shared hero factory (Creative Director). Cloaked lantern-bearer, +Z forward.
  *  Dark body + emissive cyan accents (hem, eyes, lantern) so bloom + rim light make it pop on the dark floor. */
@@ -7,7 +8,7 @@ export interface Hero { group: THREE.Group; lantern: THREE.Mesh; light: THREE.Po
 export function createHero(opts: { scale?: number; lights?: boolean } = {}): Hero {
   const scale = opts.scale ?? 1;
   const g = new THREE.Group();
-  const dark = new THREE.MeshStandardMaterial({ color: 0x1a2340, roughness: 0.8, flatShading: true, emissive: 0x0a1630, emissiveIntensity: 0.6 });
+  const dark = addRim(new THREE.MeshStandardMaterial({ color: 0x1a2340, roughness: 0.8, flatShading: true, emissive: 0x0a1630, emissiveIntensity: 0.6 }), 0x3df2ff, 0.9);
   const cyanMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3df2ff).multiplyScalar(1.6) });
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, rx = 0, rz = 0) => {
     const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); m.castShadow = true; g.add(m); return m;
