@@ -32,6 +32,7 @@ function load(file, ext) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
+  if (url.pathname === '/netstats') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(rooms ? rooms.stats() : null)); }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
   let rel = decodeURIComponent(url.pathname);
   let file = path.join(DIST, path.normalize(rel));
@@ -55,11 +56,15 @@ const server = http.createServer((req, res) => {
   res.end(req.method === 'HEAD' ? undefined : body);
 });
 
-// WebSocket on /ws (same port). Placeholder: echo/broadcast. Netcode engineer replaces with game rooms.
-const wss = new WebSocketServer({ server, path: '/ws', perMessageDeflate: false });
-wss.on('connection', (ws) => {
-  ws.on('message', (d) => { for (const c of wss.clients) if (c !== ws && c.readyState === 1) c.send(d.toString()); });
-});
+// WebSocket on /ws (same port): authoritative co-op rooms from dist-server/net.mjs (built by `npm run build:server`).
+// If the bundle is missing the static server + /healthz still work and /ws is refused.
+const wss = new WebSocketServer({ server, path: '/ws', perMessageDeflate: false, maxPayload: 4096 });
+let rooms = null;
+try {
+  const { RoomManager } = await import('../dist-server/net.mjs');
+  rooms = new RoomManager();
+  wss.on('connection', (ws) => rooms.handle(ws));
+} catch (e) { console.warn('netcode bundle not available, /ws disabled:', e.code || e.message); wss.on('connection', (ws) => ws.close(1013)); }
 
 server.listen(PORT, '0.0.0.0', () => console.log(`listening on ${PORT}`));
 process.on('SIGTERM', () => server.close(() => process.exit(0)));

@@ -4,13 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-server.mjs",
     "start": "node server/index.js",
-    "server:dev": "node server/index.js",
+    "server:dev": "npm run build:server && node server/index.js",
     "assets": "node scripts/optimize-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "test:determinism": "node tests/determinism.test.mjs"
+    "test:determinism": "node tests/determinism.test.mjs",
+    "build:server": "node scripts/build-server.mjs",
+    "test:net": "node tests/net-loopback.test.mjs"
   },
   "dependencies": {
     "@fontsource/rajdhani": "^5.3.0",
