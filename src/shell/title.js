@@ -81,7 +81,7 @@ export async function createTitle({ onFallback } = {}) {
   ring.position.y = 0.02; scene.add(ring);
 
   // hero silhouette with lantern
-  const hero = new THREE.Group(); const dark = new THREE.MeshStandardMaterial({ color: 0x16203a, roughness: 0.8, flatShading: true, emissive: 0x0b3a52, emissiveIntensity: 0.55 });
+  const hero = new THREE.Group(); const dark = new THREE.MeshStandardMaterial({ color: 0x1a2a4a, roughness: 0.85, flatShading: true, emissive: 0x0a3550, emissiveIntensity: 0.3 });
   const add = (geo, mat, x, y, z, rx = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); hero.add(m); return m; };
   add(new THREE.ConeGeometry(0.62, 1.8, 6), dark, 0, 0.9, 0); add(new THREE.IcosahedronGeometry(0.23, 0), dark, 0, 1.92, 0); add(new THREE.ConeGeometry(0.3, 0.5, 6), dark, 0, 2.1, -0.02);
   add(new THREE.CylinderGeometry(0.1, 0.12, 0.7, 5), dark, 0.42, 1.35, 0.18, 0.5, -0.5);
@@ -93,9 +93,9 @@ export async function createTitle({ onFallback } = {}) {
   const cy = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3df2ff).multiplyScalar(3), toneMapped: false });
   const hem = add(new THREE.TorusGeometry(0.66, 0.07, 4, 16), cy, 0, 0.06, 0, Math.PI / 2);
   add(new THREE.BoxGeometry(0.07, 0.05, 0.05), cy, -0.09, 1.9, 0.2); add(new THREE.BoxGeometry(0.07, 0.05, 0.05), cy, 0.09, 1.9, 0.2);
-  { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(160,250,255,.7)'); gr.addColorStop(0.35, 'rgba(61,242,255,.45)'); gr.addColorStop(1, 'rgba(61,242,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); halo.scale.setScalar(0.85); halo.position.copy(lantern.position); hero.add(halo); }
-  const rimL = new THREE.PointLight(0x3df2ff, 16, 12, 1.4); rimL.position.set(-1.6, 2.2, -1.4); hero.add(rimL);
+  { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(160,250,255,.42)'); gr.addColorStop(0.35, 'rgba(61,242,255,.45)'); gr.addColorStop(1, 'rgba(61,242,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); halo.scale.setScalar(0.55); halo.position.copy(lantern.position); hero.add(halo); }
+  const rimL = new THREE.PointLight(0x3df2ff, 11, 12, 1.4); rimL.position.set(-1.6, 2.2, -1.4); hero.add(rimL);
   hero.scale.setScalar(1.3);
   scene.add(hero);
   scene.add(new THREE.HemisphereLight(0x39406e, 0x07080f, 0.7));
