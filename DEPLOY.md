@@ -2,7 +2,8 @@
 
 - Live: https://emberhorde.fly.dev (Fly app `emberhorde`, config in `fly.toml`). Health: `/healthz`. WebSocket: `wss://emberhorde.fly.dev/ws` (same port).
 - Every push to `main` runs `.github/workflows/deploy.yml`: `flyctl deploy --remote-only`, then a smoke test (`/healthz` and `/` must return 200, else the run fails). Runs are serialized; the newest commit always wins.
-- Manual deploy: `fly deploy --remote-only` (needs `FLY_API_TOKEN`).
+- Single machine on purpose: in-memory WS rooms break across machines. Always deploy with `--ha=false`.
+- Manual deploy: `fly deploy --remote-only --ha=false` (needs `FLY_API_TOKEN`).
 
 ## Rollback
 1. Fast: `git revert <bad-sha> && git push` (redeploys automatically), or
