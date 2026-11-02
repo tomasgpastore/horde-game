@@ -2,14 +2,20 @@ name: CI
 on:
   push: { branches: [main] }
   pull_request:
+  schedule: [{ cron: '0 6 * * *' }]
+  workflow_dispatch:
 # Newer pushes to the same PR/branch cancel the older run (main is never cancelled).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+env:
+  # Specs in the fast, required gate. Everything else in tests/ runs in the sharded "slow" job.
+  FAST_SPECS: 'smoke slice cards'
 jobs:
-  build:
+  fast:
+    # Required PR gate (~5 min). Docker build is intentionally NOT here: deploy builds the image.
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +24,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:determinism
       - run: npm run build
-      - run: docker build -t horde-game .
       - id: pw
         run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
       - uses: actions/cache@v4
@@ -30,15 +35,48 @@ jobs:
         if: steps.pwcache.outputs.cache-hit != 'true'
       - run: npx playwright install-deps chromium
         if: steps.pwcache.outputs.cache-hit == 'true'
-      - run: npm test
+      - run: npx playwright test $FAST_SPECS
         env: { CI: '1' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: playwright-fast, path: test-results, retention-days: 14 }
+
+  slow:
+    # Non-required: main pushes, nightly, manual. Sharded; each shard keeps workers=1 (software GL).
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
+      - id: pw
+        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        id: pwcache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ steps.pw.outputs.v }}
+      - run: npx playwright install --with-deps chromium
+        if: steps.pwcache.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps chromium
+        if: steps.pwcache.outputs.cache-hit == 'true'
+      - name: Run slow specs (shard ${{ matrix.shard }}/4)
+        env: { CI: '1' }
+        run: |
+          SLOW=$(for f in tests/*.spec.ts; do b=$(basename "$f" .spec.ts); case " $FAST_SPECS " in *" $b "*) ;; *) echo "$f";; esac; done)
+          npx playwright test --shard=${{ matrix.shard }}/4 $SLOW
       - name: Summarize perf/playthrough
         if: always()
         run: |
-          echo '### Perf / playthrough' >> $GITHUB_STEP_SUMMARY
+          echo '### Perf / playthrough (shard ${{ matrix.shard }})' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat test-results/*/perf.json test-results/*/playthrough.json 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: playwright-artifacts, path: test-results, retention-days: 14 }
+        with: { name: playwright-slow-${{ matrix.shard }}, path: test-results, retention-days: 14 }
