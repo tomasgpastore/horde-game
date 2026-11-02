@@ -81,12 +81,17 @@ export class Renderer {
     if (this.q === 'low' || this.noDegrade || dt <= 0 || dt > 0.5) return; this.slowT += dt; this.slowN++; if (this.slowT < 0.8) return;
     if (this.slowT / this.slowN > 0.04) this.setQuality(this.q === 'high' ? 'med' : 'low'); this.slowT = 0; this.slowN = 0;
   }
+  /** Per-stage CPU ms (EMA) + draw calls/tris of the last frame. Exposed as window.__game.perf; shown by ?debug=1. */
+  perf = { camera: 0, particles: 0, enemies: 0, pools: 0, arena: 0, submit: 0, total: 0, calls: 0, tris: 0, enemyCount: 0 };
+  private lap(key: 'camera' | 'particles' | 'enemies' | 'pools' | 'arena' | 'submit', t0: number) { const t = performance.now(); this.perf[key] += (t - t0 - this.perf[key]) * 0.1; return t; }
   render(s: SimState, dt: number, alpha: number) {
+    let T = performance.now(); const T0 = T; this.three.info.autoReset = false; this.three.info.reset();
     this.watchPerf(dt); const ex = alpha * (1 / 60);
     const p = s.players[0], px = p.x + p.vx * ex, pz = p.z + p.vz * ex; // extrapolate between 60Hz ticks
     this.playerMesh.position.set(px, 0, pz); this.playerMesh.rotation.y = p.facing; this.lantern.position.y = 2.2 + Math.sin(s.time * 3) * 0.08;
     this.rig.update(dt, px, pz, p.vx, p.vz, s.enemies.count);
     if (this.sun) { this.sun.position.set(px + this.sunOff.x, this.sunOff.y, pz + this.sunOff.z); this.sun.target.position.set(px, 0, pz); }
+    T = this.lap('camera', T);
     { let n = 0; for (let i = 0; i < Renderer.NP; i++) { if (this.pl[i] <= 0) continue; this.pl[i] -= dt; if (this.pl[i] <= 0) continue;
         this.pv[i * 3 + 1] -= 14 * dt; this.px[i * 3] += this.pv[i * 3] * dt; this.px[i * 3 + 1] = Math.max(0.05, this.px[i * 3 + 1] + this.pv[i * 3 + 1] * dt); this.px[i * 3 + 2] += this.pv[i * 3 + 2] * dt;
         this.m.position.set(this.px[i * 3], this.px[i * 3 + 1], this.px[i * 3 + 2]); this.m.rotation.set(this.pl[i] * 9, this.pl[i] * 7, 0); this.m.scale.setScalar(Math.min(1, this.pl[i] * 2.5)); this.m.updateMatrix();
@@ -96,7 +101,8 @@ export class Renderer {
     this.trailTick++; this.vfx.update(dt);
     const b = s.boss; this.tele.visible = !!b && b.mode === 1;
     if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(s.time * 18)); }
-    this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0;
+    T = this.lap('particles', T);
+    this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0; T = this.lap('enemies', T);
     n = 0; let rn = 0, tn = 0; const pr = s.projectiles; for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
       const k = pr.kind[i];
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
@@ -111,7 +117,8 @@ export class Renderer {
     n = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
       this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); if (pk.magnet[i] && (this.trailTick & 1)) this.vfx.trail(pk.x[i], 0.45, pk.z[i]); }
     this.gemMesh.count = n; this.gemMesh.instanceMatrix.needsUpdate = true;
-    this.arena.update(dt, s.time);
+    T = this.lap('pools', T); this.arena.update(dt, s.time); T = this.lap('arena', T);
     if (this.bloomOn) this.composer.render(dt); else this.three.render(this.scene, this.camera);
+    this.lap('submit', T); const inf = this.three.info.render; this.perf.total += (performance.now() - T0 - this.perf.total) * 0.1; this.perf.calls = inf.calls; this.perf.tris = inf.triangles; this.perf.enemyCount = s.enemies.count;
   }
 }

@@ -15,6 +15,7 @@ export class Game {
   constructor(parent: HTMLElement, private shellInput: ShellInput, public settings: Settings) {
     this.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%'; this.ui.style.cssText = 'position:absolute;inset:0;pointer-events:none;color:#fff';
     parent.append(this.canvas, this.ui);
+    if (new URLSearchParams(location.search).get('debug') === '1') { this.dbg = document.createElement('pre'); this.dbg.style.cssText = 'position:absolute;left:8px;bottom:8px;margin:0;font:11px monospace;white-space:pre;color:#9fe;background:#0008;padding:4px 6px;pointer-events:none'; this.ui.append(this.dbg); }
     this.input = new KeyboardMouse(this.canvas);
     this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui, i => this.choose(i));
     (window as any).__game = this; // QA hook
@@ -57,6 +58,9 @@ export class Game {
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
   hitstop = 0;
+  /** QA/perf hook: window.__game.perf = per-stage CPU ms, draw calls, tris. ?debug=1 shows an overlay. */
+  get perf() { return { fps: this.fps, ...this.renderer.perf }; }
+  dbg: HTMLElement | null = null;
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
@@ -78,6 +82,7 @@ export class Game {
     }
     this.renderer.render(this.sim.state, this.paused ? 0 : dt, this.acc / TICK_DT);
     this.hud.update(this.sim.state, this.fps);
+    if (this.dbg) { const q = this.renderer.perf; this.dbg.textContent = `${this.fps.toFixed(0)}fps  calls ${q.calls}  tris ${(q.tris / 1000).toFixed(0)}k  enemies ${q.enemyCount}\ncpu ms: total ${q.total.toFixed(2)} | camera ${q.camera.toFixed(2)} | enemies ${q.enemies.toFixed(2)} | particles ${q.particles.toFixed(2)} | pools ${q.pools.toFixed(2)} | arena ${q.arena.toFixed(2)} | submit ${q.submit.toFixed(2)}`; }
     this.frames++; this.fpsT += dt; if (this.fpsT >= 1) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
   };
 }
