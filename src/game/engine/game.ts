@@ -36,6 +36,13 @@ export class Game {
     dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
     // TODO Engine: screenshake honours s.shake
   }
+  /** Aim at the nearest live enemy (touch/gamepad); fall back to move direction, then keep previous aim. */
+  autoAim(me: { x: number; z: number }, inp: PlayerInput) {
+    const e = this.sim.state.enemies; let best = -1, bd = Infinity;
+    for (let i = 0; i < e.count; i++) { if (!e.alive[i]) continue; const dx = e.x[i] - me.x, dz = e.z[i] - me.z, d = dx * dx + dz * dz; if (d < bd) { bd = d; best = i; } }
+    if (best >= 0) { const l = Math.sqrt(bd) || 1; inp.aimX = (e.x[best] - me.x) / l; inp.aimZ = (e.z[best] - me.z) / l; }
+    else if (inp.moveX || inp.moveZ) { const l = Math.hypot(inp.moveX, inp.moveZ); inp.aimX = inp.moveX / l; inp.aimZ = inp.moveZ / l; }
+  }
   gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, time: s.time, victory } })); }
   /** ?autoplay=1 debug bot (trailer capture): kites away from the horde's centre of mass; invulnerable; auto-picks cards. */
   autoplay = new URLSearchParams(location.search).get('autoplay') === '1'; private botT = 0;
@@ -59,6 +66,7 @@ export class Game {
       const inp: PlayerInput = this.autoplay ? this.bot(me) : this.input.poll(me, this.renderer.camera);
       const si = this.shellInput, m = si.move; if (!this.autoplay && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; } // touch stick or gamepad (shell)
       if (si.dash) { inp.dash = true; si.dash = false; }
+      if (si.touch || m.x || m.y) this.autoAim(me, inp); // no mouse on touch/gamepad: aim at nearest enemy
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
         this.audio.consume(this.sim.state.events); this.renderer.consumeEvents(this.sim.state.events);
