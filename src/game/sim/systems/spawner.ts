@@ -20,6 +20,7 @@ function spawnOne(s: SimState, kind: number, x: number, z: number): boolean {
 }
 export const spawner: System = { name: 'spawner', update(s, c) {
   const a = s.spawner; let aliveCount = 0;
+  const grace = s.biome > 0 ? Math.min(1, 0.4 + (s.time - s.biomeT0) / 80) : 1; // new biome: the horde ramps back up over ~50s (breathing room after the boss)
   const wave = waveAt(s.time), def = waveFor(wave), R = c.arena.radius;
   if (wave !== a.lastWave) { a.lastWave = wave; s.wave = wave; s.events.push({ t: 'waveStart', wave });
   }
@@ -40,8 +41,8 @@ export const spawner: System = { name: 'spawner', update(s, c) {
   };
   // continuous trickle (slightly ramped inside the wave so it breathes)
   const phase = (s.time % WAVE_SECONDS) / WAVE_SECONDS;
-  a.budget += def.rate * (0.8 + 0.4 * phase) * (s.boss ? 0.35 : 1) * c.dt; // boss fight: normal spawns drop to 35% (Designer BOSS_RULES) so the boss is the main threat
-  while (a.budget >= 1) { a.budget -= 1; if (aliveCount >= (s.boss ? def.cap * 0.55 : def.cap)) { a.budget = Math.min(a.budget, 2); break; }
+  a.budget += def.rate * (0.8 + 0.4 * phase) * (s.boss ? 0.12 : 1) * c.dt; // boss fight: normal spawns drop to 35% (Designer BOSS_RULES) so the boss is the main threat
+  while (a.budget >= 1) { a.budget -= 1; if (aliveCount >= (s.boss ? def.cap * 0.4 : def.cap) * grace) { a.budget = Math.min(a.budget, 2); break; }
     const p = s.players[c.rng.pick(act)], [x, z] = place(p, c.rng.range(0, Math.PI * 2), (s.time < 40 ? 12 : SPAWN_DIST) + c.rng.range(0, 4)); // first 40s: spawn close = constant contact
     if (spawnOne(s, sampleKind(), x, z)) aliveCount++; }
   // opening pack: 8 husks arrive from one side at 3s so the very first seconds already have contact (Creative Director pacing)

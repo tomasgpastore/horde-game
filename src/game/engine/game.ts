@@ -63,7 +63,7 @@ export class Game {
   fastForward(seconds: number) {
     if (seconds <= 0) return; const s = this.sim.state, p = s.players[0]; let guard = 0;
     s.biomeT0 = Math.max(0, seconds - (ARENA_BOSS[this.sim.arena.id]?.time ?? 300)); // ?arena=X&t=N → that biome's boss arrives right at t=N
-    while (s.time < seconds + 0.05 && s.phase !== 'gameOver' && guard++ < 60 * 60 * 20) { p.iframes = 1e9; if (s.phase === 'levelUp') { this.sim.choose(s.tick % 3); continue; } this.sim.step([this.bot(p)]); }
+    while (s.time < seconds + 0.05 && s.phase !== 'gameOver' && guard++ < 60 * 60 * 20) { p.iframes = 1e9; if (s.phase === 'levelUp') { this.sim.choose(this.botPick()); continue; } this.sim.step([this.bot(p)]); }
     p.iframes = 1; p.hp = p.maxHp; this.renderer.rig.snap();
   }
   pause() { this.paused = true; audio.suspend(); } resume() { this.paused = false; this.last = performance.now(); audio.resume(); }
@@ -104,6 +104,8 @@ export class Game {
     let mx = sx + Math.cos(a) * 0.02 - me.x / r * w, mz = sz + Math.sin(a) * 0.02 - me.z / r * w; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
+  /** Autoplay/fast-forward card rule: evolution > new weapon > Vitality/Armor > anything (builds that can actually kill bosses). */
+  botPick(): number { const ch = this.sim.state.levelChoices, pri = (id: string) => id.startsWith('e:') ? 0 : id.startsWith('w:') ? 1 : id === 'p:hp' || id === 'p:armor' ? 2 : 3; let b = 0; ch.forEach((id, i) => { if (pri(id) < pri(ch[b])) b = i; }); return b; }
   hitstop = 0; ctxLost = false;
   /** QA hook: current quality-driven alive cap (min'd with the tuned time curve in waves.ts). */
   get aliveLimit() { return limits.maxAlive; }
@@ -114,7 +116,7 @@ export class Game {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000)); // clamp: rAF timestamps can precede `last` after a blocking fast-forward (negative dt blew up the camera) this.last = now;
     const me = this.sim.state.players[0];
-    if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
+    if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.botPick()); }
     if (this.ctxLost) { this.last = now; return; } // GL context gone: nothing to draw, don't advance the sim
     if (this.running && !this.paused) {
       const r = this.renderer; this.acc += dt * (r.slowmo > 0 ? 0.3 : 1); if (r.slowmo > 0) r.slowmo -= dt; // level-up slow-mo (sim stays fixed-step)

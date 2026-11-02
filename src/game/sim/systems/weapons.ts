@@ -19,7 +19,8 @@ function damage(s: SimState, ctx: SimCtx, j: number, dmg: number) {
 function nearest(s: SimState, x: number, z: number, maxD: number, skip: Uint8Array | null): number {
   const e = s.enemies; let best = maxD * maxD, bi = -1;
   for (let i = 0; i < e.count; i++) { if (!e.alive[i] || (skip && skip[i])) continue;
-    const dx = e.x[i] - x, dz = e.z[i] - z, d = dx * dx + dz * dz; if (d < best) { best = d; bi = i; } }
+    const dx = e.x[i] - x, dz = e.z[i] - z; let d = dx * dx + dz * dz; if (s.boss && i === s.boss.idx) d *= 0.2; // boss priority: auto-aim favours the boss over minions (kills in ~1 min instead of minutes)
+    if (d < best) { best = d; bi = i; } }
   return bi;
 }
 const orbitCdT = new Float32Array(MAX_ENEMIES), lavaCdT = new Float32Array(MAX_ENEMIES), chainSeen = new Uint8Array(MAX_ENEMIES);
