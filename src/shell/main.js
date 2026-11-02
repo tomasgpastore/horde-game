@@ -19,7 +19,7 @@ let title = null, ui = null, titleOn = false;
 const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
 const musicTitle = () => { try { ui?.title(); } catch {} };
 async function initTitle() { // live 3D backdrop: lazy chunk, skipped for low quality / reduced motion
-  try { ui = new (await import('../game/audio/index.ts')).Audio(); } catch (e) { console.warn('title audio', e); }
+  try { ui = new (await import('../game/audio/index.ts')).Audio(); if (state !== 'playing' && state !== 'paused') musicTitle(); /* queued until first gesture */ } catch (e) { console.warn('title audio', e); }
   if (reduced || settings.quality === 'low') return;
   try { title = await (await import('./title.js')).createTitle({ onFallback: () => { title = null; document.body.classList.remove('scene-on'); } }); document.body.classList.add('scene-on'); } catch (e) { console.warn('title scene disabled', e); title = null; }
 }

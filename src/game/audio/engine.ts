@@ -282,12 +282,12 @@ class Music {
 
   /** Duck the music by `db` (negative) for `secs`, e.g. boss telegraph. */
   duck(db = -6, secs = 0.6) {
-    if (!this.e.ctx) return; const g = this.e.musicDuck.gain, t = this.ctx.currentTime;
+    if (!audio.ctx) return; const g = this.e.musicDuck.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t); g.setTargetAtTime(Math.pow(10, db / 20), t, 0.04); g.setTargetAtTime(this.paused ? PAUSE_GAIN : 1, t + secs, 0.2);
   }
   /** While true (card screen open): music is low-passed ~800Hz and slightly ducked. */
   setPaused(p: boolean) {
-    this.paused = p; if (!this.e.ctx) return; const t = this.ctx.currentTime;
+    this.paused = p; if (!audio.ctx) return; const t = this.ctx.currentTime;
     this.e.musicLpf.frequency.setTargetAtTime(p ? 800 : 20000, t, p ? 0.08 : 0.25);
     this.e.musicDuck.gain.cancelScheduledValues(t); this.e.musicDuck.gain.setTargetAtTime(p ? PAUSE_GAIN : 1, t, 0.1);
   }
@@ -296,7 +296,7 @@ class Music {
 
   /** Switch theme. Crossfades on the next bar boundary when something is already playing (sync=true). */
   play(name: MusicName | null, sync = true) {
-    if (!this.e.ctx) { this.e.queueMusic(name); return; }
+    if (!audio.ctx) { audio.queueMusic(name); return; }
     if (name === this.current && !this.pending) return;
     if (name === this.current) { this.pending = null; return; }
     if (this.current && sync && name) { this.pending = { name }; return; }

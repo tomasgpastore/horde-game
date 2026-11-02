@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test';
+const hook = (page: any) => page.waitForFunction(() => (window as any).__audio, null, { timeout: 15000 });
+
+test('audio unlocks on first real click and title music starts', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/'); await hook(page);
+  const before = await page.evaluate(() => { const a = (window as any).__audio.audio; return a.ctx ? a.ctx.state : 'none'; });
+  expect(before).not.toBe('running'); // no sound before a user gesture (autoplay policy)
+  await page.click('button[data-a=settings]'); // any real click is the first gesture
+  await page.waitForFunction(() => (window as any).__audio.audio.ctx?.state === 'running', null, { timeout: 5000 });
+  await page.waitForFunction(() => (window as any).__audio.music.current === 'title', null, { timeout: 5000 });
+  expect(errors).toEqual([]);
+});
+
+test('audio unlocks on first keypress', async ({ page }) => {
+  await page.goto('/'); await hook(page);
+  await page.keyboard.press('Space');
+  await page.waitForFunction(() => (window as any).__audio.audio.ctx?.state === 'running', null, { timeout: 5000 });
+});
+
+test('boss / hurt / dash / death paths fire sounds, switch theme, no errors', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?autoplay=1'); await hook(page); await page.click('button[data-a=play]');
+  await page.waitForFunction(() => (window as any).__game?.sim?.state?.tick > 30);
+  await page.evaluate(() => { const w = window as any, s = w.__audio.sfx, o = s.play.bind(s); w.T = {}; s.play = (n: string, p: any) => { w.T[n] = (w.T[n] || 0) + 1; return o(n, p); }; });
+  const emit = (ev: any[]) => page.evaluate((ev) => { const g = (window as any).__game; g.audio.consume(ev, g.sim.state); }, ev);
+  await page.waitForFunction(() => (window as any).__audio.music.current === 'battle', null, { timeout: 8000 });
+  await emit([{ t: 'playerHurt', id: 0, dmg: 5 }, { t: 'dash', id: 0 }]);
+  await emit([{ t: 'bossSpawn', x: 0, z: 0, bossId: 'b' }]);
+  const duck = await page.evaluate(() => (window as any).__audio.audio.musicDuck.gain.value);
+  await page.waitForFunction(() => (window as any).__audio.music.current === 'boss', null, { timeout: 8000 });
+  await emit([{ t: 'bossDeath', x: 0, z: 0, bossId: 'b' }]);
+  await page.waitForFunction(() => (window as any).__audio.music.current === 'battle', null, { timeout: 8000 });
+  await emit([{ t: 'gameOver', victory: false }]);
+  const T = await page.evaluate(() => (window as any).T);
+  expect(T.hurt).toBeGreaterThan(0); expect(T.dash).toBeGreaterThan(0); expect(T.boss_telegraph).toBeGreaterThan(0);
+  expect(T.boss_roar).toBeGreaterThan(0); expect(T.levelup).toBeGreaterThan(0); expect(T.death).toBeGreaterThan(0);
+  expect(duck).toBeLessThan(1); // telegraph ducks the music right after bossSpawn
+  expect(errors).toEqual([]);
+});
