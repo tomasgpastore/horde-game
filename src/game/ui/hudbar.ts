@@ -3,9 +3,9 @@ import type { SimState } from '@shared/types';
  *  Self-contained: mountTopHud(root) -> { update(state, fps) }. hud.ts keeps cards/gear/boss. */
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 const CSS = `.hud-top,.xpbar{display:none!important}.boss{top:76px!important}.gear{top:118px!important}
-.tb-xp{position:absolute;left:0;right:0;top:0;height:11px;background:#06060ccc;border-bottom:1px solid #3df2ff44}
+.tb-xp{position:absolute;left:0;right:0;top:0;height:12px;background:#06060ccc;border-bottom:1px solid #3df2ff44}
 .tb-xp i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3df2ff,#9fe8ff 55%,#ffd35a);box-shadow:0 0 14px #3df2ff,0 0 4px #fff8;transition:width .15s}
-.tb-xp.pulse{animation:tbpulse .9s ease-out}@keyframes tbpulse{0%{box-shadow:0 0 0 #3df2ff}30%{box-shadow:0 0 36px 8px #3df2ff;filter:brightness(1.8)}100%{box-shadow:0 0 0 #3df2ff}}
+.tb-xp i{position:relative}.tb-xp i::after{content:'';position:absolute;right:-3px;top:-3px;bottom:-3px;width:10px;border-radius:5px;background:#fff;filter:blur(3px);box-shadow:0 0 12px 4px #9fe8ff}.tb-xp.pulse{animation:tbpulse .9s ease-out}@keyframes tbpulse{0%{box-shadow:0 0 0 #3df2ff}30%{box-shadow:0 0 36px 8px #3df2ff;filter:brightness(1.8)}100%{box-shadow:0 0 0 #3df2ff}}
 .tb-lv{position:absolute;left:12px;top:14px;width:58px;height:64px;display:flex;align-items:center;justify-content:center;font:700 26px Rajdhani,system-ui,sans-serif;color:#eaffff;text-shadow:0 0 10px #3df2ff;
   clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:linear-gradient(#1a3a52,#0b1624);filter:drop-shadow(0 0 6px #3df2ff)}
 .tb-lv::before{content:'';position:absolute;inset:3px;clip-path:inherit;background:linear-gradient(#10243a,#070d16);z-index:-1}.tb-lv b{position:relative}
