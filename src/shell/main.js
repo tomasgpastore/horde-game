@@ -77,7 +77,8 @@ let padActive = false;
   requestAnimationFrame(pad); })();
 
 let game = null, state = 'loading', mode = 'solo';
-const setState = (s) => { state = s; document.body.classList.toggle('playing', s === 'playing'); };
+const setState = (s) => { state = s; document.body.classList.toggle('playing', s === 'playing'); document.body.classList.toggle('in-menu', s === 'menu' || s === 'loading'); };
+document.body.classList.add('in-menu'); // game HUD hidden until the run starts
 function toggle() { if (state === 'playing') { game.pause(); setState('paused'); show('pause'); } else if (state === 'paused') resume(); }
 function resume() { game.resume(); setState('playing'); show(); }
 
