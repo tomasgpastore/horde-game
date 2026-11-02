@@ -36,13 +36,13 @@ export function waveFor(wave: number): WaveDef {
   return {
     wave: w,
     rate: 3.0 + w * 1.6 + Math.pow(w, 1.5) * 0.3,
-    cap: Math.min(limits.maxAlive, capAt(w * WAVE_SECONDS - WAVE_SECONDS / 2)),
+    cap: Math.min(limits.maxAlive, capAt(w * WAVE_SECONDS)),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
     surge: { every: 26, count: 8 + w * 3 }, // first ring at 14s (nextSurge), from wave 1 (Designer #84)
   };
 }
 /** Alive-enemy target over time (s -> cap): fairer early curve (~50 @0:30, ~85 @1:00) + Designer's late scaling (150 @5:00, 280 @10:00, 420 @15:00; see content/balance.ts SPAWN_SEGMENTS). */
-const CAP_POINTS: [number, number][] = [[0, 45], [30, 50], [60, 85], [120, 100], [180, 115], [300, 200], [480, 290], [600, 340], [900, 420]];
+const CAP_POINTS: [number, number][] = [[0, 45], [30, 50], [60, 85], [120, 100], [180, 115], [300, 300], [480, 350], [600, 385], [900, 420]];
 export function capAt(t: number): number {
   if (t <= 0) return CAP_POINTS[0][1];
   for (let i = 1; i < CAP_POINTS.length; i++) if (t <= CAP_POINTS[i][0]) { const [t0, c0] = CAP_POINTS[i - 1], [t1, c1] = CAP_POINTS[i]; return Math.round(c0 + (c1 - c0) * (t - t0) / (t1 - t0)); }
