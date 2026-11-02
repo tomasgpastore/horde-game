@@ -20,7 +20,9 @@ const MIXES: SpawnEntry[][] = [
   [{ kind: 0, weight: 3 }, { kind: 1, weight: 1 }],
   [{ kind: 0, weight: 2 }, { kind: 1, weight: 2 }],
   [{ kind: 0, weight: 2 }, { kind: 1, weight: 2 }, { kind: 2, weight: 1 }],
-  [{ kind: 1, weight: 2 }, { kind: 2, weight: 2 }],
+  [{ kind: 0, weight: 2 }, { kind: 1, weight: 2 }, { kind: 2, weight: 1 }, { kind: 3, weight: 2 }],
+  [{ kind: 1, weight: 2 }, { kind: 2, weight: 2 }, { kind: 3, weight: 2 }, { kind: 5, weight: 1 }],
+  [{ kind: 2, weight: 2 }, { kind: 3, weight: 2 }, { kind: 4, weight: 1 }, { kind: 5, weight: 2 }],
 ];
 /** Waves are generated from a formula so there is no end to the table; tweak numbers here only. */
 export function waveFor(wave: number): WaveDef {
