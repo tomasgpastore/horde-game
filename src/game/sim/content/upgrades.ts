@@ -41,9 +41,18 @@ function available(p: PlayerState): UpgradeDef[] {
   return UPGRADES.filter(u => u.id.startsWith('w:') ? (p.weapons.find(w => 'w:' + w.id === u.id)?.level ?? 0) < MAX_WEAPON_LEVEL : (p.stats['n_' + u.id] ?? 0) < MAX_PASSIVE_STACKS); // passives cap at 8 stacks (no infinite snowball)
 }
 /** Pick `n` distinct choices deterministically. */
+/** Passive paired with each weapon's evolution (see EVOLUTIONS[...].has). */
+export const PAIR_PASSIVE: Record<string, string> = { ember_bolt: 'p:might', orbit_blades: 'p:area', frost_nova: 'p:haste', chain_lightning: 'p:luck', lava_trail: 'p:armor', seeker_spears: 'p:speed' };
+/** Offer generator (3 cards). Build-variety loop: (1) an available EVOLVE card always leads; (2) one slot is GUARANTEED for upgrading an owned weapon below max
+ *  (the highest-level one, so builds focus); (3) a weapon at level >= 5 whose paired passive isn't owned also guarantees that passive; (4) the rest is random from the pool. */
 export function rollChoices(p: PlayerState, rng: Rng, n = 3, boss = false): string[] {
-  const out: string[] = evolutions(p, boss).slice(0, 1); // an available evolution always leads the offer
-  const pool = available(p).map(u => u.id);
+  const out: string[] = evolutions(p, boss).slice(0, 1);
+  const add = (id: string | undefined) => { if (id && out.length < n && !out.includes(id) && available(p).some(u => u.id === id)) out.push(id); };
+  const owned = p.weapons.filter(w => !w.evolved && w.level < MAX_WEAPON_LEVEL && UPGRADES.some(u => u.id === 'w:' + w.id)).sort((a, b) => b.level - a.level);
+  if (owned.length) add('w:' + owned[0].id);
+  const focus = p.weapons.filter(w => !w.evolved && w.level >= 5 && PAIR_PASSIVE[w.id] && !EVOLUTIONS[w.id]?.has(p)).sort((a, b) => b.level - a.level)[0];
+  if (focus) add(PAIR_PASSIVE[focus.id]);
+  const pool = available(p).map(u => u.id).filter(id => !out.includes(id));
   while (out.length < n && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
   return out;
 }
