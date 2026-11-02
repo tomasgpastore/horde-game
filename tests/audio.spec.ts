@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 const hook = (page: any) => page.waitForFunction(() => (window as any).__audio, null, { timeout: 15000 });
 
+// slow CI shards (software GL): generous per-test timeout (these specs wait on real sim/audio state, not wall-clock)
+test.describe.configure({ timeout: 150000 });
 test('audio unlocks on first real click and title music starts', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   await page.goto('/'); await hook(page);
