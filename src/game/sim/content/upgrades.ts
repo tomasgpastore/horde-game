@@ -49,7 +49,7 @@ export function rollChoices(p: PlayerState, rng: Rng, n = 3, boss = false): stri
   const out: string[] = evolutions(p, boss).slice(0, 1);
   const add = (id: string | undefined) => { if (id && out.length < n && !out.includes(id) && available(p).some(u => u.id === id)) out.push(id); };
   const owned = p.weapons.filter(w => !w.evolved && w.level < MAX_WEAPON_LEVEL && UPGRADES.some(u => u.id === 'w:' + w.id)).sort((a, b) => b.level - a.level);
-  if (owned.length) add('w:' + owned[0].id);
+  if (owned.length && rng.next() < 0.75) add('w:' + owned[0].id); // 75% of offers (deterministic via rng): evolutions land a little later than every-offer
   const focus = p.weapons.filter(w => !w.evolved && w.level >= 5 && PAIR_PASSIVE[w.id] && !EVOLUTIONS[w.id]?.has(p)).sort((a, b) => b.level - a.level)[0];
   if (focus) add(PAIR_PASSIVE[focus.id]);
   const pool = available(p).map(u => u.id).filter(id => !out.includes(id));

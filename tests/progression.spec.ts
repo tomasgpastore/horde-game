@@ -12,7 +12,7 @@ test('weapon upgrade cards are offered and an evolution is reachable by picking 
       let b = 0; ch.forEach((c, j) => { if (rank(c) < rank(ch[b])) b = j; }); log.push(ch[b]); if (ch[b].startsWith('e:')) evolvedAt = picks; g.sim.choose(b); picks++; }
     return { evolvedAt, offers, upgradeOffers, picks, log: log.join(' ') }; });
   console.log('PROG ' + JSON.stringify(r));
-  expect(r.evolvedAt).toBeGreaterThan(0); expect(r.evolvedAt).toBeLessThan(25); expect(r.upgradeOffers).toBeGreaterThanOrEqual(r.offers - 2);
+  expect(r.evolvedAt).toBeGreaterThan(0); expect(r.evolvedAt).toBeLessThan(30); expect(r.upgradeOffers).toBeGreaterThanOrEqual(Math.floor(r.offers * 0.5)); // slot is offered in ~75% of offers (+ random upgrade draws)
   const evoShot = await page.evaluate(() => { const g = (window as any).__game, s = g.sim.state; g.paused = false; g.running = false; return s.players[0].weapons.map((w: any) => w.id + ':' + w.level + (w.evolved ? '*' : '')).join(','); }); console.log('BUILD ' + evoShot);
   await page.waitForTimeout(3000); await page.screenshot({ path: '/tmp/shot-progression.png' });
 });
