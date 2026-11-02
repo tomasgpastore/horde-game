@@ -25,7 +25,7 @@ async function initTitle() { // live 3D backdrop: lazy chunk, skipped for low qu
 }
 
 const screens = {
-  loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div><div class="hints" id="tip"></div>`),
+  loading: mk('', `<h1>EMBERHORDE</h1><div class="loadbar"><i></i></div><div class="tag" id="ltxt">Loading…</div><div class="hints" id="tip"></div>`),
   menu: mk('hidden menu', `<h1>EMBERHORDE</h1><p class="tag">Survive the swarm. Build the impossible.</p>
     <button class="btn primary" data-a="play">Play</button>
     <button class="btn" data-a="settings">Settings</button><button class="btn" data-a="credits">Credits</button>
@@ -105,7 +105,7 @@ screens.loading.querySelector('#tip').textContent=TIPS[Math.random()*TIPS.length
 // boot
 (async () => {
   if (!webgl) return show('nogl');
-  const bar = screens.loading.querySelector('.bar i'), txt = screens.loading.querySelector('#ltxt');
+  const bar = screens.loading.querySelector(".loadbar i"), txt = screens.loading.querySelector('#ltxt');
   try {
     const titleReady = initTitle(); // loads in parallel with the game chunk
     const { default: createGame } = await import('../game/index.js');
