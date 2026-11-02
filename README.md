@@ -13,6 +13,19 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 - A boss at 5:00 (the Hollow Stag)
 - Solo only (no co-op)
 
+## The three bosses
+Preview each arena and boss directly (these jump the clock for testing; a normal run starts in the first arena):
+
+| Boss | Arena | Link |
+|---|---|---|
+| The Hollow Stag | Ashen Woods | [?t=300&autoplay=1](https://emberhorde.fly.dev/?t=300&autoplay=1) |
+| The Bell-Warden | Drowned Cathedral | [?t=600&arena=drowned_cathedral](https://emberhorde.fly.dev/?t=600&arena=drowned_cathedral&autoplay=1) |
+| The Unlit | Void Garden | [?t=900&arena=void_garden](https://emberhorde.fly.dev/?t=900&arena=void_garden&autoplay=1) |
+
+![Hollow Stag](docs/shots/boss1-hollow-stag.jpg)
+![Bell-Warden](docs/shots/boss2-bell-warden.jpg)
+![The Unlit](docs/shots/boss3-the-unlit.jpg)
+
 ## Controls
 WASD / arrows to move · mouse to aim · Space to dash · E for your ability · Esc to pause · gamepad supported (left stick move, right stick aim, A dash, X ability) · touch: drag the left stick, weapons fire automatically.
 
