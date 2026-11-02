@@ -5,7 +5,7 @@ export class CameraRig {
   cam: THREE.PerspectiveCamera;
   private tx = 0; private tz = 0; private lx = 0; private lz = 0;
   trauma = 0; shakeScale = 1; private t = 0; private inited = false;
-  height = 20; back = 14; private zoom = 1; zoomBoost = 0; // zoomBoost: extra pull-out (boss fights)
+  maxR = 1e9; /* camera target never goes beyond this radius from arena centre (set by Renderer: R-9) */ height = 20; back = 14; private zoom = 1; zoomBoost = 0; // zoomBoost: extra pull-out (boss fights)
   constructor(cam: THREE.PerspectiveCamera) { this.cam = cam; }
   addTrauma(a: number) { this.trauma = Math.min(1, this.trauma + a); }
   snap() { this.inited = false; }
@@ -14,7 +14,7 @@ export class CameraRig {
     const k = (r: number) => 1 - Math.exp(-r * dt);
     // look-ahead toward movement direction, smoothed
     this.lx += (vx * 0.35 - this.lx) * k(3); this.lz += (vz * 0.35 - this.lz) * k(3);
-    const gx = px + this.lx, gz = pz + this.lz;
+    let gx = px + this.lx, gz = pz + this.lz; const gr = Math.hypot(gx, gz); if (gr > this.maxR) { gx *= this.maxR / gr; gz *= this.maxR / gr; } // never frame the edge/void
     if (!this.inited) { this.tx = gx; this.tz = gz; this.inited = true; }
     this.tx += (gx - this.tx) * k(9); this.tz += (gz - this.tz) * k(9);
     // pull out slightly in big hordes
