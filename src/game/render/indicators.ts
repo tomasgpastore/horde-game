@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { SimState } from '@shared/types';
 
 const MAX = 10, PAD = 44, BOSS = '#ff3b3b', ELITE = '#ffc83a', CHEST = '#6fe8ff';
-export const CHEST_KIND = 5; // pickup kind for chests (sim has none yet; indicator is ready for it)
+export const CHEST_KIND = 1; // pickup kind per Tech Lead
 
 /** Edge-of-screen arrows (pooled DOM) pointing at off-screen boss / elites / chests. Read-only on SimState. */
 export class Indicators {
