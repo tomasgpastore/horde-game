@@ -22,10 +22,16 @@ export class Game {
     if (new URLSearchParams(location.search).get('debug') === '1') { this.dbg = document.createElement('pre'); this.dbg.style.cssText = 'position:absolute;left:8px;bottom:8px;margin:0;font:11px monospace;white-space:pre;color:#9fe;background:#0008;padding:4px 6px;pointer-events:none'; this.ui.append(this.dbg); }
     this.input = new KeyboardMouse(this.canvas);
     // WebGL context loss (mobile backgrounding, GPU reset): stop drawing + sim, show a message, resume when three restores the context.
-    const note = document.createElement('div'); note.textContent = 'Graphics reloading…'; note.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000a;font:600 22px sans-serif;letter-spacing:.1em;color:#ffd9a0;pointer-events:none'; this.ui.append(note);
+    const note = document.createElement('div'); note.textContent = 'Restoring…'; note.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000a;font:600 22px sans-serif;letter-spacing:.1em;color:#ffd9a0;pointer-events:none'; this.ui.append(note);
     this.canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ctxLost = true; note.style.display = 'flex'; });
     this.canvas.addEventListener('webglcontextrestored', () => { this.ctxLost = false; this.last = performance.now(); note.style.display = 'none'; dispatchEvent(new Event('resize')); });
-    this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui, i => this.choose(i));
+    this.reset();
+    try { this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); }
+    catch (err) { // no WebGL2 / GPU blocklisted: friendly full-screen message instead of a blank canvas
+      const m = document.createElement('div'); m.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#0b0810;color:#ffd9a0;font:600 20px/1.5 sans-serif;pointer-events:auto';
+      m.textContent = "Your browser/GPU can't run Emberhorde 3D — try Chrome or Edge with hardware acceleration enabled."; this.ui.append(m); throw err;
+    }
+    this.hud = mountHud(this.ui, i => this.choose(i));
     (window as any).__game = this; // QA hook
     this.applySettings(settings);
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
