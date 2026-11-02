@@ -6,6 +6,13 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 
 ▶ **Play: https://emberhorde.fly.dev**
 
+## Features
+- 6 weapons: Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears
+- 6 weapon evolutions unlocked by pairing a weapon with its passive
+- Elites every 40s (from 0:50) that drop chests
+- A boss at 5:00 (the Hollow Stag)
+- Solo only (no co-op)
+
 ## Controls
 WASD / arrows to move · mouse to aim · Space to dash · E for your ability · Esc to pause · gamepad supported (left stick move, right stick aim, A dash, X ability) · touch: drag the left stick, weapons fire automatically.
 
