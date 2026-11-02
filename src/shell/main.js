@@ -4,7 +4,7 @@ const root = document.getElementById('shell');
 const DEF = { volume: 0.8, music: 0.7, sfx: 0.9, quality: 'med', shake: true };
 let settings = { ...DEF, ...JSON.parse(localStorage.getItem('eh-settings') || '{}') };
 const save = () => localStorage.setItem('eh-settings', JSON.stringify(settings));
-const input = { move: { x: 0, y: 0 }, touch: matchMedia('(pointer:coarse)').matches };
+const input = { move: { x: 0, y: 0 }, dash: false, touch: matchMedia('(pointer:coarse)').matches };
 if (input.touch) document.body.classList.add('touch');
 window.__input = input;
 
@@ -33,6 +33,7 @@ const screens = {
 };
 const pauseBtn = $('<button id="pausebtn" aria-label="Pause">❚❚</button>'); root.appendChild(pauseBtn);
 const stick = $('<div id="stick"><b></b></div>'); root.appendChild(stick);
+const dashBtn = $('<button id="dashbtn">DASH</button>'); root.appendChild(dashBtn); dashBtn.addEventListener('pointerdown', () => { input.dash = true; });
 
 screens.menu.querySelector('#hints').innerHTML = input.touch
   ? 'Drag the left stick to move · weapons fire automatically'
@@ -55,11 +56,13 @@ syncSettings();
   const end = e => { if (e.pointerId !== id) return; id = null; knob.style.transform = ''; input.move.x = input.move.y = 0; };
   stick.addEventListener('pointerup', end); stick.addEventListener('pointercancel', end); }
 
-// gamepad -> input.move (only if no touch stick active)
+// gamepad -> input.move; touch stick takes priority while held
+let padActive = false;
 (function pad() { const p = [...(navigator.getGamepads?.() || [])].find(Boolean);
-  if (p && !stick.matches(':active')) { const dz = v => Math.abs(v) < .15 ? 0 : v; const x = dz(p.axes[0]), y = dz(p.axes[1]);
-    if (x || y) { input.move.x = x; input.move.y = y; } else if (p._lastPad) { input.move.x = input.move.y = 0; } }
-  if (p) { const s = p.buttons[9]?.pressed; if (s && !pad.s) toggle(); pad.s = s; }
+  if (p) { const dz = v => Math.abs(v) < .15 ? 0 : v; const x = dz(p.axes[0]), y = dz(p.axes[1]);
+    if (x || y) { input.move.x = x; input.move.y = y; padActive = true; } else if (padActive) { input.move.x = input.move.y = 0; padActive = false; }
+    const b = p.buttons; if (b[0]?.pressed || b[1]?.pressed || b[5]?.pressed) input.dash = true;
+    const s = b[9]?.pressed; if (s && !pad.s) toggle(); pad.s = s; }
   requestAnimationFrame(pad); })();
 
 let game = null, state = 'loading', mode = 'solo';
