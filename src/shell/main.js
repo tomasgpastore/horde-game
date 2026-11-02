@@ -26,9 +26,16 @@ const show = (...s) => { for (const e of Object.values(screens)) e.classList.add
   if (s.includes('menu')) { screens.menu.classList.remove('enter'); void screens.menu.offsetWidth; screens.menu.classList.add('enter'); title?.show(); musicTitle(); } };
 let title = null, ui = null, titleOn = false;
 const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+// Mute checkbox <-> audio engine (engine owns persistence + the M hotkey; it fires 'eh-mute' on any change)
+const muteBox = () => screens.settings.querySelector('#mute');
+function bindMute(audio) {
+  muteBox().checked = audio.isMuted;
+  muteBox().addEventListener('change', e => audio.setMuted(e.target.checked));
+  addEventListener('eh-mute', e => { muteBox().checked = !!e.detail; });
+}
 const musicTitle = () => { try { ui?.title(); } catch {} };
 async function initTitle() { // live 3D backdrop: lazy chunk, skipped for low quality / reduced motion
-  try { ui = new (await import('../game/audio/index.ts')).Audio(); if (state !== 'playing' && state !== 'paused') musicTitle(); /* queued until first gesture */ } catch (e) { console.warn('title audio', e); }
+  try { const am = await import('../game/audio/index.ts'); ui = new am.Audio(); bindMute(am.audio); if (state !== 'playing' && state !== 'paused') musicTitle(); /* queued until first gesture */ } catch (e) { console.warn('title audio', e); }
   if (reduced || settings.quality === 'low') return;
   try { title = await (await import('./title.js')).createTitle({ onFallback: () => { title = null; document.body.classList.remove('scene-on'); } }); document.body.classList.add('scene-on'); } catch (e) { console.warn('title scene disabled', e); title = null; }
 }
@@ -44,6 +51,7 @@ const screens = {
     <label>Music<input type="range" min="0" max="1" step=".05" data-k="music"></label>
     <label>SFX<input type="range" min="0" max="1" step=".05" data-k="sfx"></label>
     <label>Quality<select data-k="qualityPref"><option value="auto">Auto (recommended)</option><option value="low">Low (best for phones)</option><option value="high">High</option></select></label>
+    <label>Mute (M)<input type="checkbox" id="mute"></label>
     <label>Screen shake<input type="checkbox" data-k="shake"></label>
     <button class="btn" data-a="back">Back</button></div>`),
   credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Font: Rajdhani by Indian Type Foundry (SIL OFL 1.1).<br>All music &amp; sound effects are synthesized in-game.<br>Full licenses: CREDITS.md in the repo.</p><button class="btn" data-a="back">Back</button></div>`),
@@ -54,6 +62,7 @@ const screens = {
       <div class="rbtns"><button class="btn primary" data-a="retry">Retry</button><button class="btn" data-a="quit">Menu</button></div></div>`),
   nogl: mk('hidden', `<h1>EMBERHORDE</h1><p class="err">Your browser can't run WebGL, which this game needs. Try a recent Chrome, Firefox, Edge or Safari, and make sure hardware acceleration is enabled.</p>`),
 };
+muteBox().checked = localStorage.getItem('eh_muted') === '1'; // until the audio module loads
 const pauseBtn = $('<button id="pausebtn" aria-label="Pause">❚❚</button>'); root.appendChild(pauseBtn);
 const stick = $('<div id="stick"><b></b></div>'); root.appendChild(stick);
 const dashBtn = $('<button id="dashbtn">DASH</button>'); root.appendChild(dashBtn); dashBtn.addEventListener('pointerdown', () => { input.dash = true; });
@@ -117,8 +126,9 @@ addEventListener('game:over', async (e) => { setState('over'); const d = e.detai
   const win = !!d.victory, kills = d.kills ?? d.score ?? 0, time = Math.round(d.time ?? 0), level = d.level ?? 1;
   card.className = 'results ' + (win ? 'victory' : 'defeat'); q('#rtitle').textContent = win ? 'VICTORY' : 'YOU FELL'; q('#rsub').textContent = win ? 'The night is yours.' : 'The swarm claims another lantern.';
   q('#rk').textContent = kills; q('#rt').textContent = `${Math.floor(time / 60)}:${String(time % 60).padStart(2, '0')}`; q('#rl').textContent = level;
-  [['kills', kills, 0], ['time', time, 1], ['level', level, 2]].forEach(([k, v, i]) => { // best badge only when beating a previous record
-    const key = 'eh-best-' + k, prev = +(localStorage.getItem(key) || 0); card.querySelectorAll('.best')[i].hidden = !(prev > 0 && v > prev); if (v > prev) localStorage.setItem(key, v); });
+  // NEW BEST comes from the game's meta store (detail.records.broken; single source of truth, never flagged on a first run on an arena)
+  const broken = d.records?.broken ?? [], prevB = d.records?.prev;
+  ['kills', 'time', 'level'].forEach((k, i) => { const el = card.querySelectorAll('.best')[i]; el.hidden = !broken.includes(k); el.title = prevB ? `Previous best: ${k === 'time' ? Math.floor(prevB[k] / 60) + ':' + String(Math.round(prevB[k]) % 60).padStart(2, '0') : prevB[k]}` : ''; });
   const gear = q('#rgear'); gear.innerHTML = '';
   try { const { iconSvg } = await import('../game/art/icons.ts');
     for (const w of d.weapons || []) { const el = document.createElement('div'); el.className = 'rw'; el.innerHTML = `${iconSvg('w:' + w.id)}<span>Lv ${w.level}</span>`; gear.appendChild(el); } } catch (err) { console.warn('icons', err); }

@@ -9,7 +9,7 @@ import { MAX_ENEMIES } from '@shared/types';
  *  Kind index = ENEMIES table index: 0 husk, 1 wisp, 2 brute, 3 skitter, 4 bloater, 5 shield knight, 6 spitter, 7 wraith. */
 type G = THREE.BufferGeometry;
 interface Part { g: G; x?: number; y?: number; z?: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number }
-interface Look { body: number; glow: number; parts: Part[]; glowParts: Part[]; float?: number; bob?: number; scale?: number }
+interface Look { body: number; glow: number; parts: Part[]; glowParts: Part[]; float?: number; hot?: number; /* 0..1 lerp of the glow mesh toward white-hot, for contrast on violet */ bob?: number; scale?: number }
 
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
 const cone = (r: number, h: number, s = 6) => new THREE.ConeGeometry(r, h, s);
@@ -24,9 +24,9 @@ const LOOKS: Look[] = [
     glowParts: [{ g: box(0.12, 0.08, 0.06), x: 0.1, y: 1.15, z: 0.57 }, { g: box(0.12, 0.08, 0.06), x: -0.1, y: 1.15, z: 0.57 }],
   },
   { // 1 WISP: floating magenta core in thorns
-    body: 0x2a0f26, glow: 0xff2e88, float: 0.9, bob: 0.25,
+    body: 0x2a0f26, glow: 0xff2e88, float: 0.9, bob: 0.25, hot: 0.14,
     parts: [{ g: cone(0.12, 0.7, 4), y: 0.5, rx: Math.PI, sx: 1 }, { g: cone(0.1, 0.5, 4), x: 0.35, y: 0, rz: -Math.PI / 2 }, { g: cone(0.1, 0.5, 4), x: -0.35, y: 0, rz: Math.PI / 2 }, { g: cone(0.1, 0.6, 4), y: -0.45 }],
-    glowParts: [{ g: ico(0.3, 1) }],
+    glowParts: [{ g: ico(0.36, 1) }],
   },
   { // 2 BRUTE: blocky lime-cracked tank
     body: 0x24301a, glow: 0xb6ff3b, scale: 1.0, bob: 0.04,
@@ -80,10 +80,16 @@ export const KIND_COLORS = LOOKS.map(l => l.glow);
 export class EnemyRenderer {
   private body: THREE.InstancedMesh[] = []; private glow: THREE.InstancedMesh[] = [];
   private counts = new Int32Array(LOOKS.length);
+  /** Elite gold crown: one InstancedMesh for all kinds, hovering above each elite's head and slowly spinning (Artist). Heights = approx model tops per kind. */
+  private crown: THREE.InstancedMesh; private crownTop = [1.5, 1.9, 2.6, 1.1, 2.0, 2.4, 2.3, 2.6, 0];
   constructor(scene: THREE.Scene) {
+    { const parts: THREE.BufferGeometry[] = [new THREE.TorusGeometry(0.34, 0.06, 4, 8).rotateX(Math.PI / 2)];
+      for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; parts.push(new THREE.ConeGeometry(0.1, 0.38, 4).translate(Math.cos(a) * 0.34, 0.24, Math.sin(a) * 0.34)); }
+      this.crown = new THREE.InstancedMesh(mergeGeometries(parts.map(g => { const q = g.index ? g.toNonIndexed() : g; q.deleteAttribute('uv'); return q; }))!, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb52a).multiplyScalar(1.9), toneMapped: false }), 256);
+      this.crown.frustumCulled = false; this.crown.count = 0; scene.add(this.crown); }
     LOOKS.forEach((l, k) => {
       const bm = new THREE.InstancedMesh(build(l.parts), addRim(new THREE.MeshLambertMaterial({ color: l.body, flatShading: true, emissive: l.glow, emissiveIntensity: 0.07 }), l.glow, 0.8), MAX_ENEMIES);
-      const gm = new THREE.InstancedMesh(build(l.glowParts), new THREE.MeshBasicMaterial({ color: new THREE.Color(l.glow).multiplyScalar(1.7), toneMapped: false }), MAX_ENEMIES);
+      const gm = new THREE.InstancedMesh(build(l.glowParts), new THREE.MeshBasicMaterial({ color: new THREE.Color(l.glow).lerp(new THREE.Color(0xffffff), l.hot ?? 0).multiplyScalar(1.7), toneMapped: false }), MAX_ENEMIES);
       bm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_ENEMIES * 3).fill(1), 3);
       for (const x of [bm, gm]) { x.frustumCulled = false; x.count = 0; scene.add(x); }
       bm.castShadow = k !== 1; this.body.push(bm); this.glow.push(gm);
@@ -91,7 +97,7 @@ export class EnemyRenderer {
   }
   /** Hot path: raw matrix writes (no Object3D), extrapolated by ex seconds. Body+glow share the matrix. */
   update(e: EnemyPool, t: number, ex = 0) {
-    this.counts.fill(0);
+    this.counts.fill(0); let cn = 0; const cm = this.crown.instanceMatrix.array as Float32Array;
     for (let i = 0; i < e.count; i++) {
       if (!e.alive[i]) continue;
       const k = e.kind[i] < LOOKS.length ? e.kind[i] : 0, l = LOOKS[k], n = this.counts[k]++;
@@ -101,8 +107,11 @@ export class EnemyRenderer {
       ba[o] = c; ba[o + 1] = 0; ba[o + 2] = -sn; ba[o + 3] = 0; ba[o + 4] = 0; ba[o + 5] = sc; ba[o + 6] = 0; ba[o + 7] = 0; ba[o + 8] = sn; ba[o + 9] = 0; ba[o + 10] = c; ba[o + 11] = 0;
       ba[o + 12] = e.x[i] + e.vx[i] * ex; ba[o + 13] = (l.float ?? 0) + (l.float ? Math.sin(ph) * (l.bob ?? 0) : bob); ba[o + 14] = e.z[i] + e.vz[i] * ex; ba[o + 15] = 1;
       ga.set(ba.subarray(o, o + 16), o);
+      if (el && cn < 256) { const ca2 = Math.cos(t * 1.5 + i), sa = Math.sin(t * 1.5 + i), cs = 1 + sc * 0.25, q = cn * 16; cm[q] = ca2 * cs; cm[q + 1] = 0; cm[q + 2] = -sa * cs; cm[q + 3] = 0; cm[q + 4] = 0; cm[q + 5] = cs; cm[q + 6] = 0; cm[q + 7] = 0; cm[q + 8] = sa * cs; cm[q + 9] = 0; cm[q + 10] = ca2 * cs; cm[q + 11] = 0;
+        cm[q + 12] = ba[o + 12]; cm[q + 13] = ba[o + 13] + (this.crownTop[k] ?? 2) * sc + 0.35 + Math.sin(t * 4 + i) * 0.06; cm[q + 14] = ba[o + 14]; cm[q + 15] = 1; cn++; }
       const f = e.hitFlash[i] > 0 && e.hitFlash[i] <= 0.15 ? 1.8 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = f * (el ? 3 : 1); ca[n * 3 + 1] = f * (el ? 2.2 : 1); ca[n * 3 + 2] = f * (el ? 0.6 : 1); // elites: gold-hot body
     }
+    this.crown.count = cn; this.crown.instanceMatrix.needsUpdate = true;
     for (let k = 0; k < LOOKS.length; k++) {
       const n = this.counts[k]; for (const x of [this.body[k], this.glow[k]]) { x.count = n; x.instanceMatrix.needsUpdate = true; }
       this.body[k].instanceColor!.needsUpdate = true;

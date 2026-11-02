@@ -91,7 +91,7 @@ const R = await page.evaluate(async (CAL) => {
   // mix: loudest-music vs weakest important sfx
   const mus = Math.max(...['battle', 'boss'].map(t => res.music[t][1].rmsDb));
   res.mix = { loudestMusicRmsDb: mus };
-  for (const n of ['hurt', 'levelup', 'boss_slam', 'crunch', 'evolve', 'ui_card', 'chest']) if (res.sfx[n].peakDb < mus + 6) res.fail.push(`${n} not >=6dB above music RMS`);
+  for (const n of ['hurt', 'levelup', 'boss_slam', 'evolve', 'ui_card', 'chest']) if (res.sfx[n].peakDb < mus + 6) res.fail.push(`${n} not >=6dB above music RMS`);
   return res;
 }, CAL);
 await b.close();

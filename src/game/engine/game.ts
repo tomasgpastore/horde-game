@@ -1,5 +1,6 @@
 import { TICK_DT, PlayerInput } from '@shared/types';
 import { Sim, createState } from '@sim/index';
+import { Indicators } from '@render/indicators';
 import { Renderer } from '@render/renderer';
 import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
@@ -7,6 +8,7 @@ import { ARENA_BOSS } from '@world/waves';
 import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
+import { Meta } from '../meta/progress';
 import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
@@ -19,7 +21,17 @@ export class Game {
     parent.append(this.canvas, this.ui);
     if (new URLSearchParams(location.search).get('debug') === '1') { this.dbg = document.createElement('pre'); this.dbg.style.cssText = 'position:absolute;left:8px;bottom:8px;margin:0;font:11px monospace;white-space:pre;color:#9fe;background:#0008;padding:4px 6px;pointer-events:none'; this.ui.append(this.dbg); }
     this.input = new KeyboardMouse(this.canvas);
-    this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui, i => this.choose(i));
+    // WebGL context loss (mobile backgrounding, GPU reset): stop drawing + sim, show a message, resume when three restores the context.
+    const note = document.createElement('div'); note.textContent = 'Restoring…'; note.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000a;font:600 22px sans-serif;letter-spacing:.1em;color:#ffd9a0;pointer-events:none'; this.ui.append(note);
+    this.canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ctxLost = true; note.style.display = 'flex'; });
+    this.canvas.addEventListener('webglcontextrestored', () => { this.ctxLost = false; this.last = performance.now(); note.style.display = 'none'; dispatchEvent(new Event('resize')); });
+    this.reset();
+    try { this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); }
+    catch (err) { // no WebGL2 / GPU blocklisted: friendly full-screen message instead of a blank canvas
+      const m = document.createElement('div'); m.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#0b0810;color:#ffd9a0;font:600 20px/1.5 sans-serif;pointer-events:auto';
+      m.textContent = "Your browser/GPU can't run Emberhorde 3D — try Chrome or Edge with hardware acceleration enabled."; this.ui.append(m); throw err;
+    }
+    this.hud = mountHud(this.ui, i => this.choose(i));
     (window as any).__game = this; // QA hook
     this.applySettings(settings);
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
@@ -71,7 +83,13 @@ export class Game {
     if (best >= 0) { const l = Math.sqrt(bd) || 1; inp.aimX = (e.x[best] - me.x) / l; inp.aimZ = (e.z[best] - me.z) / l; }
     else if (inp.moveX || inp.moveZ) { const l = Math.hypot(inp.moveX, inp.moveZ); inp.aimX = inp.moveX / l; inp.aimZ = inp.moveZ / l; }
   }
-  gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, kills: s.kills, time: s.time, victory, level: s.players[0].level, weapons: s.players[0].weapons.map(w => ({ id: w.id, level: w.level })) } })); }
+  readonly meta = new Meta(); // read-only API for shell/QA: bests(arena), recent(), last; clear() is for tests
+  gameOver(victory: boolean) {
+    this.running = false; const s = this.sim.state, p = s.players[0];
+    const detail: any = { score: s.kills, kills: s.kills, time: s.time, victory, level: p.level, weapons: p.weapons.map(w => ({ id: w.id, level: w.level })) };
+    detail.records = this.meta.record(this.sim.arena.id, detail); // personal bests (see meta/progress.ts); shell shows NEW BEST from detail.records.broken
+    dispatchEvent(new CustomEvent('game:over', { detail }));
+  }
   /** ?autoplay=1 debug bot (trailer capture): kites away from the horde's centre of mass; invulnerable; auto-picks cards. */
   autoplay = new URLSearchParams(location.search).get('autoplay') === '1'; private botT = 0;
   bot(me: { x: number; z: number }): PlayerInput {
@@ -82,19 +100,22 @@ export class Game {
     if (bd < 144) { const l = Math.sqrt(bd) || 1; sx += gx / l * 0.12; sz += gz / l * 0.12; }
     this.botT += 1 / 60; const a = this.botT * 0.5;
     // stay in the middle (good trailer framing): pull toward arena centre, ramping hard beyond ~9u so the bot never reaches the edge
-    const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 9) / 12); const w = 0.02 + 2.5 * pull * pull;
+    const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 6) / 10); const w = 0.02 + 4 * pull * pull + (r > 22 ? 50 : 0); // hard inward override beyond 22u (camera clamp is at R-9)
     let mx = sx + Math.cos(a) * 0.02 - me.x / r * w, mz = sz + Math.sin(a) * 0.02 - me.z / r * w; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
-  hitstop = 0;
+  hitstop = 0; ctxLost = false;
+  /** QA hook: current quality-driven alive cap (min'd with the tuned time curve in waves.ts). */
+  get aliveLimit() { return limits.maxAlive; }
   /** QA/perf hook: window.__game.perf = per-stage CPU ms, draw calls, tris. ?debug=1 shows an overlay. */
   get perf() { return { fps: this.fps, ...this.renderer.perf }; }
-  dbg: HTMLElement | null = null;
+  dbg: HTMLElement | null = null; indicators = new Indicators(this.ui);
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
     const me = this.sim.state.players[0];
     if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
+    if (this.ctxLost) { this.last = now; return; } // GL context gone: nothing to draw, don't advance the sim
     if (this.running && !this.paused) {
       const r = this.renderer; this.acc += dt * (r.slowmo > 0 ? 0.3 : 1); if (r.slowmo > 0) r.slowmo -= dt; // level-up slow-mo (sim stays fixed-step)
       const inp: PlayerInput = this.autoplay ? this.bot(me) : this.input.poll(me, this.renderer.camera);
@@ -110,7 +131,7 @@ export class Game {
       }
     }
     this.renderer.render(this.sim.state, this.paused ? 0 : dt, this.acc / TICK_DT);
-    this.hud.update(this.sim.state, this.fps);
+    this.hud.update(this.sim.state, this.fps); this.indicators.update(this.sim.state, this.renderer.camera, this.canvas.clientWidth, this.canvas.clientHeight);
     if (this.dbg) { const q = this.renderer.perf; this.dbg.textContent = `${this.fps.toFixed(0)}fps  calls ${q.calls}  tris ${(q.tris / 1000).toFixed(0)}k  enemies ${q.enemyCount}\ncpu ms: total ${q.total.toFixed(2)} | camera ${q.camera.toFixed(2)} | enemies ${q.enemies.toFixed(2)} | particles ${q.particles.toFixed(2)} | pools ${q.pools.toFixed(2)} | arena ${q.arena.toFixed(2)} | submit ${q.submit.toFixed(2)}`; }
     this.frames++; this.fpsT += dt; if (this.fpsT >= 1) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
   };
