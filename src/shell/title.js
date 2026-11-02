@@ -105,8 +105,8 @@ export async function createTitle({ onFallback } = {}) {
   const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.65, 0.15); composer.addPass(bloom); composer.addPass(new OutputPass());
   const resize = () => { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 68 : 50; camera.updateProjectionMatrix(); setOffset(); };
-  // keep the hero visible beside the centred DOM menu on wide screens (portrait: hero above menu)
-  function setOffset() { const w = innerWidth, h = innerHeight; if (w / h > 1.2) camera.setViewOffset(w, h, -w * 0.24, 0, w, h); else camera.setViewOffset(w, h, 0, h * 0.2, w, h); camera.updateProjectionMatrix(); }
+  // wide: menu is left-aligned, hero sits at ~65% x; narrow/portrait: menu centred over a dimmed scene, hero above it
+  function setOffset() { const w = innerWidth, h = innerHeight; if (w / h > 1.2) camera.setViewOffset(w, h, -w * 0.15, h * 0.04, w, h); else camera.setViewOffset(w, h, 0, h * 0.2, w, h); camera.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
 
   const dummy = new THREE.Object3D(); const V = new THREE.Vector3(); let t = 0, last = 0, raf = 0, on = false, zoom = 0, zoomTarget = 0, frames = 0, bloomOn = true, acc = 0, win = 0, guardDone = false;
@@ -115,7 +115,7 @@ export async function createTitle({ onFallback } = {}) {
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 3.5);
     const ang = t * 0.05, R = (11 + Math.sin(t * 0.1) * 0.9) * (1 - zoom * 0.7), el = 35 * Math.PI / 180;
     camera.position.set(Math.cos(ang) * R * Math.cos(el), R * Math.sin(el) * (1 - zoom * 0.3), Math.sin(ang) * R * Math.cos(el)); camera.lookAt(0, 1.5 + zoom * 0.5, 0);
-    hero.position.y = Math.sin(t * 1.6) * 0.06; hero.rotation.y = -ang + 1.2; lantern.rotation.y = t * 1.2;
+    hero.position.y = Math.sin(t * 1.6) * 0.06; hero.rotation.y = Math.PI / 2 - ang + 0.6; /* 3/4 view toward camera */ lantern.rotation.y = t * 1.2;
     const f = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.3) + 0.06 * Math.sin(t * 31); warm.intensity = 6 * f; cyan.intensity = 14 * (0.93 + 0.07 * Math.sin(t * 4));
     ring.material.opacity = 0.26 + 0.08 * Math.sin(t * 0.8); ring.rotation.y = t * 0.02;
     camera.getWorldDirection(V); rim.position.set(-V.z * 6 - V.x * 5, 4, V.x * 6 - V.z * 5); rim.target.position.set(0, 1.5, 0);
