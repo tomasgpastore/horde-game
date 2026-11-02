@@ -22,16 +22,18 @@ EMBERHORDE is a free 3D low-poly horde-survivor roguelite. Dodge, level up, stac
 ## Long description
 You start with one weapon and a lot of enemies headed your way.
 
-EMBERHORDE is a fast, 3D low-poly roguelite where you survive wave after wave of an ever-growing horde. Move, dodge, and let your weapons do the work while you collect XP gems, level up, and choose upgrades that combine into builds you didn't plan for. Every run is different; every death teaches you something.
+EMBERHORDE is a fast, 3D low-poly horde-survivor roguelite. Move, dash, and let your weapons do the work while you collect XP gems, level up, and pick upgrades that stack into builds you didn't plan for. Every run is different; every death teaches you something. Solo, free, and it runs in your browser.
 
-- **Play in seconds** – runs in any modern browser, nothing to install.
-- **Build-crafting** – pick from upgrades, evolve weapons, find combos that break the game (in a good way).
-- **Escalating chaos** – dozens become hundreds on screen; bosses test your build.
+- **Play in seconds** – any modern browser, nothing to install, no sign-in.
+- **6 weapons** – Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears.
+- **6 evolutions** – pair each weapon with the right passive and it transforms into something absurd.
+- **Elites and chests** – an elite hunts you every 40 seconds from 0:50; kill it for a chest.
+- **A boss at 5:00** – survive long enough to meet the Hollow Stag.
+- **Escalating chaos** – dozens become hundreds on screen.
 - **Short, replayable runs** – one more try, always.
-- **Low-poly style** – readable, colourful, smooth.
-- **Six weapons** – Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears – plus passives (Might, Haste, Swiftness, Magnet, Armor, Reach, Fortune, Vitality).
-- **Three biomes, three bosses** – Ashen Woods, Drowned Cathedral, Void Garden; the Hollow Stag, Bell-Warden and The Unlit.
-- **Plays everywhere** – keyboard + mouse, gamepad, or touch controls on mobile.
+- **Solo only** – no co-op or multiplayer.
+
+(Verified against the code on main. Only add biomes/more bosses once arena progression ships.)
 
 ## Controls (confirm with Gameplay Engineer)
 WASD / arrows to move · mouse to aim (auto-aim on touch/gamepad) · Space to dash · E ability · Esc or P to pause · gamepad: left stick move, right stick aim, A/RB dash · touch joystick + dash button on mobile
