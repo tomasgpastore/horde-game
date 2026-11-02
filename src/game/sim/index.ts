@@ -21,7 +21,7 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
     const sp = arena.playerSpawn[id % arena.playerSpawn.length];
     return { id, active: id < playerCount, x: sp.x, z: sp.z, vx: 0, vz: 0, facing: 0, hp: 100, maxHp: 100, level: 1, xp: 0, xpToNext: 7,
       dashTime: 0, dashCooldown: 0, iframes: 0, weapons: [{ id: 'ember_bolt', level: 1, cooldown: 0 }],
-      stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 2.5, cooldownMult: 1 }, dead: false };
+      stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 3, cooldownMult: 1 }, dead: false };
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
     events: [], phase: 'running', wave: 0, kills: 0, gold: 0, eliteCount: 0, swarmCount: 0, levelChoices: [],
