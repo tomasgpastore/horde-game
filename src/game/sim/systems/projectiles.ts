@@ -31,7 +31,7 @@ export const projectileSystem: System = { name: 'projectiles', update(s, c) {
         if (!e.alive[j] || j === lastHit[i]) continue;
         const def = enemyDef(e.kind[j]), dx = e.x[j] - pr.x[i], dz = e.z[j] - pr.z[i], r = def.radius + PR;
         if (dx * dx + dz * dz > r * r) continue;
-        const crit = c.rng.next() < 0.1, dmg = pr.dmg[i] * (crit ? 2 : 1);
+        const crit = c.rng.next() < 0.1 + (s.players[pr.owner[i]]?.stats.luck ?? 0), dmg = pr.dmg[i] * (crit ? 2 : 1);
         e.hp[j] -= dmg; e.hitFlash[j] = 0.1; lastHit[i] = j;
         s.events.push({ t: 'hit', x: e.x[j], z: e.z[j], dmg, crit, enemyKind: e.kind[j] });
         if (e.hp[j] <= 0) killEnemy(s, j);

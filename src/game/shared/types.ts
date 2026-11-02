@@ -56,6 +56,9 @@ export type SimEvent =
   | { t: 'waveStart'; wave: number }
   | { t: 'bossSpawn'; x: number; z: number; bossId: string }
   | { t: 'bossDeath'; x: number; z: number; bossId: string }
+  | { t: 'freeze'; ms: number }                       // hit-stop request (client skips stepping for ms)
+  | { t: 'slow'; scale: number; secs: number }          // slow-mo request (level-up etc.)
+  | { t: 'evolve'; id: number; weapon: string }         // weapon reached max level (evolution moment)
   | { t: 'gameOver'; victory: boolean };
 
 export interface SimState {
