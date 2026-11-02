@@ -69,6 +69,8 @@ export interface SimState {
   /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
   levelChoices: string[];
   /** World-owned spawner state (plain numbers => snapshot/rollback safe). */
+  /** Active boss (enemy slot `idx`); mode 0 chase, 1 telegraph, 2 charge. */
+  boss: { idx: number; id: string; maxHp: number; t: number; mode: number; dx: number; dz: number } | null;
   spawner: { budget: number; nextSurge: number; lastWave: number; boss: boolean };
 }
 
