@@ -27,6 +27,7 @@ export const bossSystem: System = { name: 'boss', update(s, c) {
     else { s.phase = 'gameOver'; s.events.push({ t: 'gameOver', victory: true }); }
     return;
   }
+  { const lx = p.x - e.x[i], lz = p.z - e.z[i], ld = Math.hypot(lx, lz); if (ld > 17 && b.mode !== 2) { const k = 14 / ld; e.x[i] = p.x - lx * k; e.z[i] = p.z - lz * k; } } // leash: boss never strays beyond ~17u of the hero
   b.t += c.dt; const ph = bossPhase(b.id, e.hp[i] / b.maxHp), spd = d.speed * ph.speedMult;
   if (ph.summon && s.time % ph.summon.everyS < c.dt) for (let k = 0; k < ph.summon.count; k++) { const j = alloc(e.alive, e.count, MAX_ENEMIES); if (j < 0) break; const a = k / ph.summon.count * Math.PI * 2 + c.rng.range(0, 0.5);
     e.alive[j] = 1; e.kind[j] = ph.summon.kind; e.flags[j] = 0; e.x[j] = e.x[i] + Math.cos(a) * 3; e.z[j] = e.z[i] + Math.sin(a) * 3; e.vx[j] = e.vz[j] = 0; e.hp[j] = spawnHp(ph.summon.kind, s.wave); e.hitFlash[j] = 0; if (j >= e.count) e.count = j + 1; }

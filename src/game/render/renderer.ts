@@ -102,7 +102,8 @@ export class Renderer {
     const p = s.players[0], px = p.x + p.vx * ex, pz = p.z + p.vz * ex; // extrapolate between 60Hz ticks
     this.playerMesh.position.set(px, 0, pz); this.playerMesh.rotation.y = p.facing; this.lantern.position.y = 2.2 + Math.sin(s.time * 3) * 0.08;
     this.rig.zoomBoost = s.boss ? 0.3 : 0; this.bossView.update(s);
-    this.rig.update(dt, px, pz, p.vx, p.vz, s.enemies.count);
+    let cx = px, cz = pz; if (s.boss) { const bi = s.boss.idx, e = s.enemies; cx += (e.x[bi] - px) * 0.3; cz += (e.z[bi] - pz) * 0.3; } // boss fight: frame hero AND boss
+    this.rig.update(dt, cx, cz, p.vx, p.vz, s.enemies.count);
     if (this.sun) { this.sun.position.set(px + this.sunOff.x, this.sunOff.y, pz + this.sunOff.z); this.sun.target.position.set(px, 0, pz); }
     T = this.lap('camera', T);
     { let n = 0; for (let i = 0; i < Renderer.NP; i++) { if (this.pl[i] <= 0) continue; this.pl[i] -= dt; if (this.pl[i] <= 0) continue;

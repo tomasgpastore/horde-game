@@ -25,7 +25,8 @@ export const spawner: System = { name: 'spawner', update(s, c) {
   }
   const bd = ARENA_BOSS[c.arena.id];
   if (bd && !a.boss && s.time >= s.biomeT0 + bd.time) { a.boss = true; const ang = c.rng.range(0, Math.PI * 2);
-    s.events.push({ t: 'bossSpawn', x: Math.cos(ang) * (R - 4), z: Math.sin(ang) * (R - 4), bossId: bd.bossId }); }
+    const hp = s.players[0]; let bx = hp.x + Math.cos(ang) * 13, bz = hp.z + Math.sin(ang) * 13; const bd2 = Math.hypot(bx, bz); if (bd2 > R - 3) { bx *= (R - 3) / bd2; bz *= (R - 3) / bd2; } // boss arrives ~13u from the hero, IN VIEW (was the arena rim = off-screen)
+    s.events.push({ t: 'bossSpawn', x: bx, z: bz, bossId: bd.bossId }); }
   // alive count
   const e = s.enemies; for (let i = 0; i < e.count; i++) aliveCount += e.alive[i];
   // players to target
