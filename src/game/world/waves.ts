@@ -38,7 +38,7 @@ export function waveFor(wave: number): WaveDef {
     rate: 2.2 + w * 1.4 + Math.pow(w, 1.5) * 0.3,
     cap: Math.min(limits.maxAlive, capAt(w * WAVE_SECONDS - WAVE_SECONDS / 2)),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
-    surge: w >= 3 ? { every: 26, count: 8 + w * 3 } : undefined,
+    surge: { every: 26, count: 8 + w * 3 }, // first ring at 14s (nextSurge), from wave 1 (Designer #84)
   };
 }
 /** Alive-enemy target over time (s -> cap): fairer early curve (~50 @0:30, ~85 @1:00) + Designer's late scaling (150 @5:00, 280 @10:00, 420 @15:00; see content/balance.ts SPAWN_SEGMENTS). */
