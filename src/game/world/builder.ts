@@ -63,13 +63,14 @@ function groundTextures(b: Biome, p: ArenaDef['palette'], R: number) {
   const N = 1024, mk = () => { const c = document.createElement('canvas'); c.width = c.height = N; return c; };
   const cv = mk(), ce = mk(), g = cv.getContext('2d')!, ge = ce.getContext('2d')!, rng = new Rng(b.seed ^ 0x51ed);
   const ca = new THREE.Color(b.groundNoise[0]), cb = new THREE.Color(b.groundNoise[1]), acc = new THREE.Color(p.accent), px = N / (2 * R);
-  g.fillStyle = '#' + ca.getHexString(); g.fillRect(0, 0, N, N); ge.fillStyle = '#000'; ge.fillRect(0, 0, N, N);
+  { const fl = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2); fl.addColorStop(0, '#171a2e'); fl.addColorStop(1, '#222845'); g.fillStyle = fl; g.fillRect(0, 0, N, N); }
+   ge.fillStyle = '#000'; ge.fillRect(0, 0, N, N);
   const rgba = (c: THREE.Color, a: number) => `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${a})`;
   // large soft blotches + fine grit
   for (let i = 0; i < 220; i++) { const x = rng.range(0, N), y = rng.range(0, N), r = rng.range(30, 120), c = ca.clone().lerp(cb, rng.next());
-    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(c, 0.35)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(c, 0.14)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
   for (let i = 0; i < 5000; i++) { const x = rng.range(0, N), y = rng.range(0, N), c = ca.clone().lerp(cb, rng.next()).offsetHSL(0, 0, rng.range(-0.06, 0.06));
-    g.fillStyle = rgba(c, 0.5); g.fillRect(x, y, rng.range(1, 4), rng.range(1, 4)); }
+    g.fillStyle = rgba(c, 0.22); g.fillRect(x, y, rng.range(1, 4), rng.range(1, 4)); }
   // worn paths: lighter winding strips from centre outwards
   const nPaths = 4 + rng.int(3), pathCol = ca.clone().lerp(cb, 0.5).offsetHSL(0, 0, 0.07);
   for (let k = 0; k < nPaths; k++) { let a = rng.range(0, 6.28), d = 0, x = N / 2, y = N / 2; g.strokeStyle = rgba(pathCol, 0.45); g.lineCap = 'round';
@@ -90,6 +91,9 @@ function groundTextures(b: Biome, p: ArenaDef['palette'], R: number) {
   return { map: wrap(cv, true), emissive: wrap(ce, true) };
 }
 
+/** CD spec: nothing taller than 1.2u inside this radius of the arena centre. */
+const PLAY_R = 14;
+
 export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHandle {
   const R = def.radius, p = def.palette, rng = new Rng(b.seed ^ 0x9e37), disposables: { dispose(): void }[] = [], objs: THREE.Object3D[] = [];
   const add = (o: THREE.Object3D) => { scene.add(o); objs.push(o); return o; };
@@ -106,7 +110,10 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   const hemi = new THREE.HemisphereLight(b.hemiSky ?? 0xaab4ff, new THREE.Color(p.ground).multiplyScalar(2.5), 1.6); add(sun); add(hemi);
   // instanced props: one InstancedMesh per kind (collider-drawn + scatter + rim)
   const buckets = new Map<PropKind, { m: THREE.Matrix4; c: THREE.Color }[]>();
+  // Unit-scale heights; props inside the playfield are capped so they never occlude the hero/camera view. Rim props (lift<0 / outside R-6) stay tall.
+  const H: Record<PropKind, number> = { rock: 1.3, pillar: 5, crystal: 3, shroom: 2, bone: 2, brazier: 2, tree: 5, flower: 1.75, shard: 4.5, arch: 4.7 };
   const push = (k: PropKind, x: number, z: number, sx: number, sy: number, ry: number, col: number, lift = 0) => {
+    if (Math.hypot(x, z) < R - 6) { const cap = Math.hypot(x, z) < PLAY_R ? 1.2 : k === 'rock' ? 1.6 : k === 'shard' ? 2.6 : 3; sy = Math.min(sy, cap / H[k]); if (k === 'shard') lift = Math.max(lift, 0); }
     const o = new THREE.Object3D(); o.position.set(x, lift, z); o.rotation.set(0, ry, 0); o.scale.set(sx, sy, sx); o.updateMatrix();
     const lst = buckets.get(k) ?? []; buckets.set(k, lst);
     lst.push({ m: o.matrix.clone(), c: new THREE.Color(col).offsetHSL(0, rng.range(-0.05, 0.05), rng.range(-0.05, 0.06)) });
@@ -119,8 +126,8 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   }
   // rim wall: tall jagged rocks just outside the playable edge
   const rimN = Math.round(R * 2.6);
-  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5), s = rng.range(1.8, 4);
-    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, s * rng.range(1.5, 3.2), rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.8, 4) * (1 - 0.4 * Math.max(0, Math.sin(a)));
+    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : s * rng.range(1.5, 3.2))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);

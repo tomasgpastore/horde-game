@@ -23,6 +23,8 @@ export function createHero(opts: { scale?: number; lights?: boolean } = {}): Her
   const lantern = add(new THREE.OctahedronGeometry(0.19, 0), cyanMat, 0.7, 2.2, 0.45); lantern.castShadow = false;
   const light = new THREE.PointLight(0x3df2ff, 16, 11, 1.6); light.position.copy(lantern.position);
   if (opts.lights !== false) g.add(light);
+  const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5, depthWrite: false })); // 1.4u blob shadow
+  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.renderOrder = 1; g.add(blob);
   g.scale.setScalar(scale);
   return { group: g, lantern, light };
 }

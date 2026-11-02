@@ -9,6 +9,7 @@ import { OccluderFader } from './occluders';
 import { createHero } from './hero';
 import { CameraRig } from './camera';
 import { EnemyRenderer, KIND_COLORS } from './enemies';
+import { Vfx, createTelegraph } from './vfx';
 import { DamageNumbers } from './dmgnums';
 import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
 
@@ -16,7 +17,7 @@ import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
  *  Engine Engineer owns: camera, lighting, post-fx, particles, instanced pools for projectiles/pickups, per-kind meshes/colors. */
 export class Renderer {
   three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-  projMesh: THREE.InstancedMesh; ringMesh: THREE.InstancedMesh; gemMesh: THREE.InstancedMesh; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
+  projMesh: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh: THREE.InstancedMesh; gemMesh: THREE.InstancedMesh; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
   rig = new CameraRig(this.camera); private sun: THREE.DirectionalLight | null = null; private sunOff = new THREE.Vector3(); private noDegrade = new URLSearchParams(location.search).has('nodegrade'); private slowT = 0; private slowN = 0; private q: 'low' | 'med' | 'high' = 'high';
   /** Game.frame reads/decrements this: seconds of slow-mo (sim runs at 0.3x). */ slowmo = 0;
   setShake(v: boolean | number) { this.rig.shakeScale = v === false ? 0 : v === true ? 1 : Number(v); }
@@ -24,19 +25,24 @@ export class Renderer {
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
   setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
-  occ!: OccluderFader; tele!: THREE.Mesh; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
+  occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
     this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
     this.arena = def.build(this.scene);
-    this.tele = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, depthWrite: false })); this.tele.rotation.x = -Math.PI / 2; this.tele.visible = false; this.scene.add(this.tele);
+    this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene);
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
     this.occ = new OccluderFader(this.scene);
     this.enemies = new EnemyRenderer(this.scene); this.dmg = new DamageNumbers(canvas.parentElement ?? document.body);
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
-    this.projMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.46), emissive(0xffffff), MAX_PROJECTILES);
+    const bolt = new THREE.CapsuleGeometry(0.13, 0.5, 3, 6); bolt.rotateX(Math.PI / 2); // 0.5u glowing capsule along +Z; octahedron kept look for other kinds via scale
+    this.projMesh = new THREE.InstancedMesh(bolt, emissive(0xffffff), MAX_PROJECTILES);
+    { // additive tapered trail (6u), vertex colour fades to black = transparent under additive blending
+      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute([-0.18, 0, 0, 0.18, 0, 0, 0, 0, -6], 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1, 1, 1, 1, 0, 0, 0], 3));
+      this.trailMesh = new THREE.InstancedMesh(tg, new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }), MAX_PROJECTILES);
+      this.trailMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.trailMesh.frustumCulled = false; this.trailMesh.count = 0; this.scene.add(this.trailMesh); }
     this.projMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3);
     this.ringMesh = new THREE.InstancedMesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }), 64);
     this.ringMesh.frustumCulled = false; this.scene.add(this.ringMesh);
@@ -63,10 +69,11 @@ export class Renderer {
   consumeEvents(ev: SimEvent[]) { // visual-only randomness is fine here (never feeds the sim)
     for (const e of ev) {
       if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
-      else if (e.t === 'hit') { this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
+      else if (e.t === 'shoot') { if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
+      else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
-      else if (e.t === 'bossSpawn') this.rig.addTrauma(0.7); else if (e.t === 'bossDeath') this.rig.addTrauma(1);
-      else if (e.t === 'levelUp') { this.rig.addTrauma(0.2); this.slowmo = 0.6; this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9); }
+      else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); }
+      else if (e.t === 'levelUp') { this.rig.addTrauma(0.2); this.slowmo = 0.6; this.vfx.levelUp(this.playerMesh.position.x, this.playerMesh.position.z); this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9); }
     }
   }
   /** Auto-degrade: if frames average >40ms for 0.8s, drop one quality tier (never upgrades). ?nodegrade=1 disables. */
@@ -86,18 +93,23 @@ export class Renderer {
         this.pMesh.setMatrixAt(n, this.m.matrix); this.flashColor.setHex(this.pcol[i]).multiplyScalar(2.4); this.pMesh.setColorAt(n, this.flashColor); n++; }
       this.m.scale.setScalar(1); this.pMesh.count = n; this.pMesh.instanceMatrix.needsUpdate = true; if (this.pMesh.instanceColor) this.pMesh.instanceColor.needsUpdate = true; }
     this.occ.update(dt, p.x, p.z);
+    this.trailTick++; this.vfx.update(dt);
     const b = s.boss; this.tele.visible = !!b && b.mode === 1;
-    if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.2 + 0.25 * Math.abs(Math.sin(s.time * 18)); }
+    if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(s.time * 18)); }
     this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0;
-    n = 0; let rn = 0; const pr = s.projectiles; for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
-      const k = pr.kind[i]; if (k === 0 && (this.trailT += 0) >= 0) this.trail(pr.x[i], pr.z[i]);
+    n = 0; let rn = 0, tn = 0; const pr = s.projectiles; for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
+      const k = pr.kind[i];
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
-      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
+      if (k === 0) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]);
+        this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
+        this.flashColor.setHex(0xffd35a).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
+      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
     this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
+    this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
     n = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
-      this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); }
+      this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); if (pk.magnet[i] && (this.trailTick & 1)) this.vfx.trail(pk.x[i], 0.45, pk.z[i]); }
     this.gemMesh.count = n; this.gemMesh.instanceMatrix.needsUpdate = true;
     this.arena.update(dt, s.time);
     if (this.bloomOn) this.composer.render(dt); else this.three.render(this.scene, this.camera);
