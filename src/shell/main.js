@@ -39,7 +39,10 @@ const screens = {
     <button class="btn" data-a="back">Back</button></div>`),
   credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Font: Rajdhani by Indian Type Foundry (SIL OFL 1.1).<br>All music &amp; sound effects are synthesized in-game.<br>Full licenses: CREDITS.md in the repo.</p><button class="btn" data-a="back">Back</button></div>`),
   pause: mk('hidden clear', `<h2>Paused</h2><button class="btn primary" data-a="resume">Resume</button><button class="btn" data-a="psettings">Settings</button><button class="btn" data-a="quit">Quit to menu</button>`),
-  over: mk('hidden clear', `<h1 style="font-size:64px">You fell</h1><p class="tag" id="score"></p><button class="btn primary" data-a="play">Try again</button><button class="btn" data-a="quit">Menu</button>`),
+  over: mk('hidden clear', `<div class="results defeat"><div class="rtitle" id="rtitle">YOU FELL</div><div class="rsub" id="rsub"></div>
+      <div class="rstats"><div class="rs"><b id="rk">0</b><span>Kills</span><i class="best" hidden>NEW BEST</i></div><div class="rs"><b id="rt">0:00</b><span>Time</span><i class="best" hidden>NEW BEST</i></div><div class="rs"><b id="rl">1</b><span>Level</span><i class="best" hidden>NEW BEST</i></div></div>
+      <div class="rgear" id="rgear"></div>
+      <div class="rbtns"><button class="btn primary" data-a="retry">Retry</button><button class="btn" data-a="quit">Menu</button></div></div>`),
   nogl: mk('hidden', `<h1>EMBERHORDE</h1><p class="err">Your browser can't run WebGL, which this game needs. Try a recent Chrome, Firefox, Edge or Safari, and make sure hardware acceleration is enabled.</p>`),
 };
 const pauseBtn = $('<button id="pausebtn" aria-label="Pause">❚❚</button>'); root.appendChild(pauseBtn);
@@ -92,13 +95,23 @@ root.addEventListener('click', async (e) => {
   else if (a === 'psettings') { show('settings'); screens.settings.dataset.from = 'pause'; }
   else if (a === 'credits') show('credits');
   else if (a === 'back') show(screens.settings.dataset.from === 'pause' && !screens.settings.classList.contains('hidden') && state === 'paused' ? 'pause' : 'menu');
+  else if (a === 'retry') { show(); game.quit(); game.start({ mode: 'solo' }); setState('playing'); }
   else if (a === 'resume') resume();
   else if (a === 'quit') { game.quit(); setState('menu'); show('menu'); }  // show('menu') restarts the title scene
 });
 pauseBtn.addEventListener('click', toggle);
 addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p') toggle(); });
 addEventListener('blur', () => { if (state === 'playing') toggle(); });
-addEventListener('game:over', (e) => { setState('over'); screens.over.querySelector('#score').textContent = e.detail ? `Score ${e.detail.score ?? ''} · ${Math.round(e.detail.time ?? 0)}s` : ''; show('over'); });
+addEventListener('game:over', async (e) => { setState('over'); const d = e.detail || {}, card = screens.over.querySelector('.results'), q = (id) => card.querySelector(id);
+  const win = !!d.victory, kills = d.kills ?? d.score ?? 0, time = Math.round(d.time ?? 0), level = d.level ?? 1;
+  card.className = 'results ' + (win ? 'victory' : 'defeat'); q('#rtitle').textContent = win ? 'VICTORY' : 'YOU FELL'; q('#rsub').textContent = win ? 'The night is yours.' : 'The swarm claims another lantern.';
+  q('#rk').textContent = kills; q('#rt').textContent = `${Math.floor(time / 60)}:${String(time % 60).padStart(2, '0')}`; q('#rl').textContent = level;
+  [['kills', kills, 0], ['time', time, 1], ['level', level, 2]].forEach(([k, v, i]) => { // best badge only when beating a previous record
+    const key = 'eh-best-' + k, prev = +(localStorage.getItem(key) || 0); card.querySelectorAll('.best')[i].hidden = !(prev > 0 && v > prev); if (v > prev) localStorage.setItem(key, v); });
+  const gear = q('#rgear'); gear.innerHTML = '';
+  try { const { iconSvg } = await import('../game/art/icons.ts');
+    for (const w of d.weapons || []) { const el = document.createElement('div'); el.className = 'rw'; el.innerHTML = `${iconSvg('w:' + w.id)}<span>Lv ${w.level}</span>`; gear.appendChild(el); } } catch (err) { console.warn('icons', err); }
+  show('over'); });
 
 const TIPS=['Standing still is how you die.','Weapons that fit together beat weapons that are strong.'];
 screens.loading.querySelector('#tip').textContent=TIPS[Math.random()*TIPS.length|0];
