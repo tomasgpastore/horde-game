@@ -22,6 +22,9 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   .card{width:220px;padding:26px 18px;background:linear-gradient(#2a2538,#17141f);border:2px solid #ffc857;border-radius:12px;text-align:center;cursor:pointer;font-family:Rajdhani,system-ui,sans-serif;transition:transform .12s;box-shadow:0 0 22px #ffc85755}
   .card{animation:cardIn .35s cubic-bezier(.2,1.4,.4,1) both;position:relative;overflow:hidden}.card:nth-child(2){animation-delay:.07s}.card:nth-child(3){animation-delay:.14s}.card:nth-child(4){animation-delay:.21s}
   @keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.9)}to{opacity:1;transform:none}}
+  .card{width:250px!important;padding:30px 22px!important}.card h3{font-size:30px!important}.card p{font-size:19px!important}.card svg{width:84px;height:84px}
+  .card .tag{font:700 13px Rajdhani,system-ui,sans-serif;letter-spacing:.2em;color:#ffc857;opacity:.85;margin-bottom:8px}.card.w .tag{color:#3df2ff}
+  .pips{display:flex;gap:5px;justify-content:center;margin:2px 0 10px}.pips i{width:9px;height:9px;transform:rotate(45deg);border:1px solid #ffffff55;background:#0006}.pips i.on{background:#3df2ff;border-color:#9fe8ff;box-shadow:0 0 8px #3df2ff}
   .card.w{border-color:#3df2ff;box-shadow:0 0 26px #3df2ff66,inset 0 0 30px #3df2ff18}.card.w h3{color:#9fe8ff}
   .card::after{content:'';position:absolute;inset:-60% -30%;background:linear-gradient(105deg,transparent 42%,#ffffff22 50%,transparent 58%);transform:translateX(-120%);transition:transform .6s}.card:hover::after{transform:translateX(120%)}
   .card svg{animation:iconPulse 2.2s ease-in-out infinite}@keyframes iconPulse{50%{transform:scale(1.07);filter:brightness(1.25)}}
@@ -67,7 +70,8 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
       if (!key) cards.style.display = 'none';
       else { cards.style.display = 'flex'; cards.innerHTML = '<h2>LEVEL UP</h2>'; s.levelChoices.forEach((id, i) => {
         const u = upgradeDef(id), w = p.weapons.find(w => 'w:' + w.id === id), c = document.createElement('div'); c.className = id.startsWith('w:') ? 'card w' : 'card';
-        c.innerHTML = `<div style="filter:drop-shadow(0 0 10px #0008);margin-bottom:6px">${iconSvg(id)}</div><h3>${u.name}</h3><p>${u.desc}</p><br><small>${w ? 'Lv ' + w.level + ' → ' + (w.level + 1) : 'Press ' + (i + 1)}</small>`;
+        const isW = id.startsWith('w:'), tag = w ? 'LV ' + w.level + ' → ' + (w.level + 1) : isW ? 'NEW WEAPON' : 'PASSIVE', pips = isW ? '<div class="pips">' + [1, 2, 3, 4, 5].map(n => '<i class="' + (n <= (w ? w.level + 1 : 1) ? 'on' : '') + '"></i>').join('') + '</div>' : '';
+        c.innerHTML = `<div class="tag">${tag}</div><div style="filter:drop-shadow(0 0 10px #0008);margin-bottom:6px">${iconSvg(id)}</div>${pips}<h3>${u.name}</h3><p>${u.desc}</p><br><small>${w ? 'Lv ' + w.level + ' → ' + (w.level + 1) : 'Press ' + (i + 1)}</small>`;
         c.onclick = () => pick(i); cards.appendChild(c); }); }
     }
   } };
