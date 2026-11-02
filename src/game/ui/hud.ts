@@ -22,7 +22,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   .card{width:220px;padding:26px 18px;background:linear-gradient(#2a2538,#17141f);border:2px solid #ffc857;border-radius:12px;text-align:center;cursor:pointer;font-family:Rajdhani,system-ui,sans-serif;transition:transform .12s;box-shadow:0 0 22px #ffc85755}
   .card{animation:cardIn .35s cubic-bezier(.2,1.4,.4,1) both;position:relative;overflow:hidden}.card:nth-child(2){animation-delay:.07s}.card:nth-child(3){animation-delay:.14s}.card:nth-child(4){animation-delay:.21s}
   @keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.9)}to{opacity:1;transform:none}}
-  .card{width:250px!important;padding:30px 22px!important}.card h3{font-size:30px!important}.card p{font-size:19px!important}.card svg{width:84px;height:84px}
+  .card{width:250px!important;padding:30px 22px!important;min-height:318px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center}.card br{display:none}.card small{margin-top:auto;padding-top:10px}.card p{flex:0 0 auto}.card h3{font-size:30px!important}.card p{font-size:19px!important}.card svg{width:84px;height:84px}
   .card .tag{font:700 13px Rajdhani,system-ui,sans-serif;letter-spacing:.2em;color:#ffc857;opacity:.85;margin-bottom:8px}.card.w .tag{color:#3df2ff}
   .pips{display:flex;gap:5px;justify-content:center;margin:2px 0 10px}.pips i{width:9px;height:9px;transform:rotate(45deg);border:1px solid #ffffff55;background:#0006}.pips i.on{background:#3df2ff;border-color:#9fe8ff;box-shadow:0 0 8px #3df2ff}
   .card.w{border-color:#3df2ff;box-shadow:0 0 26px #3df2ff66,inset 0 0 30px #3df2ff18}.card.w h3{color:#9fe8ff}
