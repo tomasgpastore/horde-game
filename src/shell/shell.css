@@ -9,7 +9,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:
 .screen.clear{background:rgba(17,16,24,.6)}
 h1{font-size:clamp(44px,10vw,110px);margin:0;letter-spacing:.08em;background:linear-gradient(#ffd36b,#ff6a2c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 0 #3a1408);animation:float 3s ease-in-out infinite}
 h2{margin:0 0 6px;font-size:32px;letter-spacing:.1em}
-.tag{opacity:.7;margin:0 0 18px;letter-spacing:.2em;font-size:13px;text-transform:uppercase}
+.tag{opacity:.7;margin:0 0 18px;letter-spacing:.2em;font-size:13px;text-transform:uppercase;padding:0 12px;text-align:center}
+@media(max-width:480px){.tag{letter-spacing:.1em}}
 @keyframes float{50%{transform:translateY(-8px)}}
 button.btn{min-width:240px;padding:14px 28px;font:700 20px inherit;font-family:inherit;letter-spacing:.12em;color:var(--fg);background:var(--panel);
  border:2px solid #4a3a66;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:transform .12s,border-color .12s,background .12s}
