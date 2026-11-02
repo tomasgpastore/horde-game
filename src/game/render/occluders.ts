@@ -17,7 +17,7 @@ export class OccluderFader {
     for (const en of this.entries) { const n = en.f.length; let changed = false;
       for (let i = 0; i < n; i++) {
         const dz = en.z[i] - hz, dx = en.x[i] - hx;
-        const inCorridor = dz > -2 && dz < 17 && Math.abs(dx) < 4.5 + Math.max(0, dz) * 0.4, near = dx * dx + dz * dz < 12;
+        const inCorridor = dz > -2 && dz < 17 && Math.abs(dx) < 4.5 + Math.max(0, dz) * 0.4, near = dx * dx + dz * dz < 42; // clear zone ~6.5u around the hero
         const target = inCorridor || near ? SMALL : 1, f = en.f[i];
         if (Math.abs(f - target) < 0.004) { if (f !== target) { en.f[i] = target; changed = true; this.write(en, i); } continue; }
         en.f[i] = f + (target - f) * k; changed = true; this.write(en, i);
