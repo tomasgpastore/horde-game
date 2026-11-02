@@ -5,7 +5,7 @@ export class CameraRig {
   cam: THREE.PerspectiveCamera;
   private tx = 0; private tz = 0; private lx = 0; private lz = 0;
   trauma = 0; shakeScale = 1; private t = 0; private inited = false;
-  height = 20; back = 14; private zoom = 1;
+  height = 20; back = 14; private zoom = 1; zoomBoost = 0; // zoomBoost: extra pull-out (boss fights)
   constructor(cam: THREE.PerspectiveCamera) { this.cam = cam; }
   addTrauma(a: number) { this.trauma = Math.min(1, this.trauma + a); }
   snap() { this.inited = false; }
@@ -18,7 +18,7 @@ export class CameraRig {
     if (!this.inited) { this.tx = gx; this.tz = gz; this.inited = true; }
     this.tx += (gx - this.tx) * k(9); this.tz += (gz - this.tz) * k(9);
     // pull out slightly in big hordes
-    const zt = 1 + Math.min(0.18, enemyCount / 1500);
+    const zt = 1 + Math.min(0.18, enemyCount / 1500) + this.zoomBoost;
     this.zoom += (zt - this.zoom) * k(1.5);
     const sh = this.trauma * this.trauma * this.shakeScale;
     const n = (f: number, s: number) => Math.sin(this.t * f + s) * Math.sin(this.t * f * 0.37 + s * 2.1);

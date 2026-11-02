@@ -58,7 +58,7 @@ const LOOKS: Look[] = [
     glowParts: [{ g: box(0.1, 0.12, 0.05), x: 0.1, y: 1.75, z: 0.22 }, { g: box(0.1, 0.12, 0.05), x: -0.1, y: 1.75, z: 0.22 }],
   },
   { // 8 BOSS: towering antlered stag-wraith (shared by all 3 bosses until bespoke models land)
-    body: 0x24121a, glow: 0xff2a2a, bob: 0.05, scale: 2.4,
+    body: 0x24121a, glow: 0xff2a2a, bob: 0.05, scale: 0.001, // hidden: bosses are drawn by render/bosses.ts (createBoss) via BossView
     parts: [{ g: cone(0.8, 2.2), y: 1.1 }, { g: ico(0.45), y: 2.3, z: 0.15 }, { g: cone(0.12, 1.4, 4), x: 0.35, y: 3.0, rz: -0.5 }, { g: cone(0.12, 1.4, 4), x: -0.35, y: 3.0, rz: 0.5 },
       { g: cone(0.1, 0.9, 4), x: 0.75, y: 3.4, rz: -0.9 }, { g: cone(0.1, 0.9, 4), x: -0.75, y: 3.4, rz: 0.9 }, { g: box(0.3, 1.2, 0.3), x: 0.6, y: 0.6, z: 0.3 }, { g: box(0.3, 1.2, 0.3), x: -0.6, y: 0.6, z: 0.3 }],
     glowParts: [{ g: box(0.12, 0.1, 0.06), x: 0.15, y: 2.35, z: 0.55 }, { g: box(0.12, 0.1, 0.06), x: -0.15, y: 2.35, z: 0.55 }, { g: ico(0.25, 1), y: 1.4, z: 0.4 }],
