@@ -6,6 +6,7 @@
 |------|------|--------|---------|-----------|----------|----------|
 | Library | three.js | mrdoob & contributors | MIT | https://github.com/mrdoob/three.js | Rendering | Engine |
 | Tool | Vite | Evan You & contributors | MIT | https://github.com/vitejs/vite | Build | Tech |
+| Audio | All SFX + music (procedural WebAudio synthesis, no samples) | Sound Designer | Original (studio) | src/game/audio/engine.ts | Sound effects and adaptive music | Sound |
 | *(add rows)* | | | | | | |
 
 ## CC-BY attribution text (shown in-game Credits screen)

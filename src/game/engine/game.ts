@@ -16,12 +16,12 @@ export class Game {
     this.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%'; this.ui.style.cssText = 'position:absolute;inset:0;pointer-events:none;color:#fff';
     parent.append(this.canvas, this.ui);
     this.input = new KeyboardMouse(this.canvas);
-    this.reset(); this.renderer = new Renderer(this.canvas, getArena('ashen_basin')); this.hud = mountHud(this.ui);
+    this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui);
     (window as any).__game = this; // QA hook
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
   }
   reset() {
-    const arena = getArena('ashen_basin'); const seed = Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff);
+    const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff);
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
   start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); }
