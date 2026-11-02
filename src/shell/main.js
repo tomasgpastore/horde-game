@@ -101,6 +101,8 @@ let padActive = false;
 
 let game = null, state = 'loading', mode = 'solo';
 const setState = (s) => { state = s; document.body.classList.toggle('playing', s === 'playing'); document.body.classList.toggle('in-menu', s === 'menu' || s === 'loading'); };
+// hide touch controls while level-up/reward cards are open so they never cover or eat card taps
+(function cardsWatch() { document.body.classList.toggle('cards-open', state === 'playing' && window.__game?.sim?.state?.phase === 'levelUp'); requestAnimationFrame(cardsWatch); })();
 document.body.classList.add('in-menu'); // game HUD hidden until the run starts
 function toggle() { if (state === 'playing') { game.pause(); setState('paused'); show('pause'); } else if (state === 'paused') resume(); }
 function resume() { game.resume(); setState('playing'); show(); }
