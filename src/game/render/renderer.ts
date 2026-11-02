@@ -7,6 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { SimState, SimEvent, ArenaDef, ArenaHandle } from '@shared/types';
 import { buildBoundary } from './boundary';
 import { ProjectileRenderer } from './projectiles';
+import { BossView } from './bossview';
 import { OccluderFader } from './occluders';
 import { createHero } from './hero';
 import { CameraRig } from './camera';
@@ -19,7 +20,7 @@ import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
  *  Engine Engineer owns: camera, lighting, post-fx, particles, instanced pools for projectiles/pickups, per-kind meshes/colors. */
 export class Renderer {
   three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-  proj!: ProjectileRenderer; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
+  proj!: ProjectileRenderer; bossView!: BossView; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
   rig = new CameraRig(this.camera); private sun: THREE.DirectionalLight | null = null; private sunOff = new THREE.Vector3(); private noDegrade = new URLSearchParams(location.search).has('nodegrade'); private slowT = 0; private slowN = 0; private q: 'low' | 'med' | 'high' = 'high';
   /** Game.frame reads/decrements this: seconds of slow-mo (sim runs at 0.3x). */ slowmo = 0;
   setShake(v: boolean | number) { this.rig.shakeScale = v === false ? 0 : v === true ? 1 : Number(v); }
@@ -38,7 +39,7 @@ export class Renderer {
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
     this.occ = new OccluderFader(this.scene);
     this.enemies = new EnemyRenderer(this.scene); this.dmg = new DamageNumbers(canvas.parentElement ?? document.body);
-    this.proj = new ProjectileRenderer(this.scene, this.vfx);
+    this.proj = new ProjectileRenderer(this.scene, this.vfx); this.bossView = new BossView(this.scene);
     const hero = createHero({ scale: 1.6 }); this.playerMesh = hero.group; this.lantern = hero.lantern; this.scene.add(this.playerMesh);
     this.pMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffffff }), Renderer.NP);
     this.pMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Renderer.NP * 3), 3); this.pMesh.frustumCulled = false; this.pMesh.count = 0; this.scene.add(this.pMesh);
@@ -80,6 +81,7 @@ export class Renderer {
     this.watchPerf(dt); const ex = alpha * (1 / 60);
     const p = s.players[0], px = p.x + p.vx * ex, pz = p.z + p.vz * ex; // extrapolate between 60Hz ticks
     this.playerMesh.position.set(px, 0, pz); this.playerMesh.rotation.y = p.facing; this.lantern.position.y = 2.2 + Math.sin(s.time * 3) * 0.08;
+    this.rig.zoomBoost = s.boss ? 0.3 : 0; this.bossView.update(s);
     this.rig.update(dt, px, pz, p.vx, p.vz, s.enemies.count);
     if (this.sun) { this.sun.position.set(px + this.sunOff.x, this.sunOff.y, pz + this.sunOff.z); this.sun.target.position.set(px, 0, pz); }
     T = this.lap('camera', T);
