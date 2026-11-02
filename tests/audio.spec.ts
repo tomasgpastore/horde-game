@@ -61,3 +61,14 @@ test('menu buttons fire UI sounds + stinger via real clicks; freeze is hit-stop,
   expect(T.levelup).toBeUndefined();
   expect(errors).toEqual([]);
 });
+
+test('M hotkey toggles mute in game, not while typing', async ({ page }) => {
+  await page.goto('/'); await hook(page);
+  await page.click('button[data-a=settings]'); await page.locator('button[data-a=back]:visible').click();
+  const muted = () => page.evaluate(() => (window as any).__audio.audio.isMuted);
+  expect(await muted()).toBe(false);
+  await page.keyboard.press('KeyM'); expect(await muted()).toBe(true);
+  await page.keyboard.press('KeyM'); expect(await muted()).toBe(false);
+  await page.evaluate(() => { const i = document.createElement('input'); i.id = 'tmp'; document.body.appendChild(i); i.focus(); });
+  await page.keyboard.press('KeyM'); expect(await muted()).toBe(false); // typing in an input: ignored
+});

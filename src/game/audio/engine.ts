@@ -7,6 +7,7 @@
  *   music.setIntensity(0..1);                    // each frame / when threat changes
  *   sfx.play('hit', { pitch: 1, volume: 1, pan: 0 });
  *   audio.setVolume('master'|'music'|'sfx', 0..1);
+ *   audio.setMuted(bool) / audio.isMuted / audio.toggleMute()   // also 'M' hotkey; fires window 'eh-mute' event; persisted in localStorage
  */
 
 export type SfxName =
@@ -26,7 +27,7 @@ const smooth = (e0: number, e1: number, x: number) => { const t = clamp((x - e0)
 
 // name -> [max concurrent voices, min ms between plays, priority (higher survives global cap)]
 const LIMITS: Record<SfxName, [number, number, number]> = {
-  hit: [6, 20, 1], kill: [5, 20, 1], gem: [4, 40, 1], levelup: [1, 300, 5], hurt: [2, 120, 4], death: [1, 500, 6],
+  hit: [6, 20, 1], kill: [5, 20, 1], gem: [4, 60, 1], levelup: [1, 300, 5], hurt: [2, 120, 4], death: [1, 500, 6],
   fire_bolt: [4, 45, 1], fire_whip: [2, 100, 1], fire_orb: [2, 120, 1], fire_nova: [2, 120, 2], fire_arrow: [4, 45, 1],
   fire_lightning: [3, 80, 2], fire_flame: [2, 90, 1],
   boss_telegraph: [1, 400, 5], boss_slam: [2, 200, 6], boss_roar: [1, 500, 5],
@@ -34,14 +35,14 @@ const LIMITS: Record<SfxName, [number, number, number]> = {
   crunch: [3, 25, 2], freeze: [2, 70, 2], evolve: [1, 800, 7], heartbeat: [2, 200, 4], stinger: [1, 800, 6],
 };
 /** Per-sound output trim (linear), calibrated by tools/audio-demo/verify.mjs so peaks land at the target level. */
-export const SFX_TRIM: Partial<Record<SfxName, number>> = {"hit":6.837,"kill":2.801,"gem":3.993,"levelup":1.4,"hurt":3.681,"death":0.638,"fire_bolt":7.635,"fire_whip":0.465,"fire_orb":2.219,"fire_nova":1.7,"fire_arrow":7.494,"fire_lightning":0.597,"fire_flame":2.969,"boss_telegraph":1.975,"boss_slam":1.058,"boss_roar":2.407,"ui_click":6.97,"ui_hover":11.23,"ui_card":1.323,"ui_back":11.055,"chest":1.481,"dash":4.195,"crunch":2.943,"freeze":5.213,"evolve":1.015,"heartbeat":2.722,"stinger":0.363};
+export const SFX_TRIM: Partial<Record<SfxName, number>> = {"hit":6.837,"kill":2.801,"gem":2.2,"levelup":1.4,"hurt":3.681,"death":0.638,"fire_bolt":7.635,"fire_whip":0.465,"fire_orb":2.219,"fire_nova":1.7,"fire_arrow":7.494,"fire_lightning":0.597,"fire_flame":2.969,"boss_telegraph":1.975,"boss_slam":1.058,"boss_roar":2.407,"ui_click":6.97,"ui_hover":11.23,"ui_card":1.323,"ui_back":11.055,"chest":1.481,"dash":4.195,"crunch":2.943,"freeze":5.213,"evolve":1.015,"heartbeat":2.722,"stinger":0.363};
 /** Per-theme music trim, calibrated so loop RMS ~ -20 dBFS at default sliders. */
-export const MUSIC_TRIM: Record<string, number> = { title: 1.527, battle: 0.838, boss: 0.646 };
+export const MUSIC_TRIM: Record<string, number> = { title: 1.07, battle: 0.59, boss: 0.455 };
 const MAX_VOICES = 36;
 /** "Swarm" sounds (spammed by hordes) route through a bus that is sidechain-ducked by important sounds. */
 const SWARM = new Set<SfxName>(['hit', 'kill', 'crunch', 'fire_bolt', 'fire_whip', 'fire_orb', 'fire_nova', 'fire_arrow', 'fire_lightning', 'fire_flame', 'dash']);
 /** important sound -> [swarm gain while it plays, hold seconds] */
-const SWARM_BASE = 0.5; // horde sounds sit ~6dB under the important ones
+const SWARM_BASE = 0.2; // horde sounds sit ~14dB under the important ones
 const DUCK: Partial<Record<SfxName, [number, number]>> = {
   levelup: [0.12, 1.2], gem: [0.6, 0.12], hurt: [0.4, 0.35], evolve: [0.25, 1.4], chest: [0.35, 0.7], death: [0.3, 1.5],
   boss_telegraph: [0.35, 0.9], boss_slam: [0.3, 0.8], boss_roar: [0.4, 0.9], ui_card: [0.4, 0.4], stinger: [0.3, 1.0],
@@ -73,10 +74,12 @@ class AudioEngine {
     this.comp.threshold.value = -16; this.comp.knee.value = 14; this.comp.ratio.value = 6;
     this.comp.attack.value = 0.004; this.comp.release.value = 0.2;
     const limiter = ctx.createDynamicsCompressor(); // brickwall-ish safety
-    limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.05;
+    limiter.threshold.value = -6; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.05;
     this.master = ctx.createGain(); this.musicBus = ctx.createGain(); this.sfxBus = ctx.createGain();
     this.musicDuck = ctx.createGain(); this.musicLpf = ctx.createBiquadFilter(); this.musicLpf.type = 'lowpass'; this.musicLpf.frequency.value = 20000; this.musicLpf.Q.value = 0.5;
-    this.swarmBus = ctx.createGain(); this.swarmBus.gain.value = SWARM_BASE; this.swarmBus.connect(this.sfxBus);
+    this.swarmBus = ctx.createGain(); this.swarmBus.gain.value = SWARM_BASE;
+    const swLp = ctx.createBiquadFilter(); swLp.type = 'lowpass'; swLp.frequency.value = 4500; swLp.Q.value = 0.5; // tame >4kHz fatigue from constant hit/kill/fire hiss
+    this.swarmBus.connect(swLp); swLp.connect(this.sfxBus);
     this.musicBus.connect(this.musicDuck); this.musicDuck.connect(this.musicLpf); this.musicLpf.connect(this.comp); this.sfxBus.connect(this.comp);
     this.dipG = ctx.createGain(); this.comp.connect(this.dipG); this.dipG.connect(this.master); this.master.connect(limiter); limiter.connect(ctx.destination);
     this.applyVolumes();
@@ -89,13 +92,31 @@ class AudioEngine {
 
   /** Hook first click/key/touch to unlock audio. */
   unlockOnFirstInteraction(target: EventTarget = window) {
-    if (this.unlockHooked) return; this.unlockHooked = true;
+    if (this.unlockHooked) return; this.unlockHooked = true; this.installHotkey();
     const go = () => { this.init(); if (this.ctx?.state === 'running') ['pointerdown', 'keydown', 'touchend', 'click'].forEach(e => target.removeEventListener(e, go)); };
     ['pointerdown', 'keydown', 'touchend', 'click'].forEach(e => target.addEventListener(e, go));
   }
 
   setVolume(ch: 'master' | 'music' | 'sfx', v: number) { this.vol[ch] = clamp(v); this.applyVolumes(); }
-  setMuted(m: boolean) { this.muted = m; this.applyVolumes(); }
+  get isMuted() { return this.muted; }
+  setMuted(m: boolean) {
+    this.muted = m; this.applyVolumes();
+    try { localStorage.setItem('eh_muted', m ? '1' : '0'); } catch { /* private mode */ }
+    window.dispatchEvent(new CustomEvent('eh-mute', { detail: m })); // UI (Settings toggle / HUD icon) can listen
+  }
+  toggleMute() { this.setMuted(!this.muted); return this.muted; }
+  private hotkeyHooked = false;
+  /** 'M' toggles mute in game (ignored while typing in inputs or with modifiers). Installed once, from unlockOnFirstInteraction. */
+  private installHotkey() {
+    if (this.hotkeyHooked) return; this.hotkeyHooked = true;
+    try { this.muted = localStorage.getItem('eh_muted') === '1'; } catch { /* */ }
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyM' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null, tag = t?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t?.isContentEditable) return;
+      this.toggleMute();
+    });
+  }
   private applyVolumes() {
     if (!this.ctx) return; const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.muted ? 0 : this.vol.master, t, 0.03);
@@ -117,7 +138,7 @@ interface Voice { name: SfxName; prio: number; end: number; kill: () => void; }
 class Sfx {
   private voices: Voice[] = [];
   private last: Partial<Record<SfxName, number>> = {};
-  private gemStreak = 0; private gemT = 0;
+  private gemStreak = 0; private gemRecent = 0; private gemT = 0;
   /** Count of plays dropped by limiter (debug). */
   dropped = 0;
 
@@ -148,6 +169,8 @@ class Sfx {
     let vol = (o.volume ?? 1) * crowd;
     if (name === 'gem') {
       if (now - this.gemT > 0.9) this.gemStreak = 0;
+      // dense gem showers (vacuum) get quieter: rolling pickup count over ~0.6s
+      this.gemRecent = this.gemRecent * Math.exp(-(now - this.gemT) / 0.6) + 1; vol *= 1 / (1 + 0.35 * (this.gemRecent - 1));
       this.gemT = now; const PENT = [0, 2, 4, 7, 9];
       const s = this.gemStreak++; const semis = PENT[s % 5] + 12 * Math.min(2, Math.floor(s / 5));
       pitch = (o.pitch ?? 1) * Math.pow(2, semis / 12);
@@ -160,7 +183,7 @@ class Sfx {
     this.voices.push({ name, prio, end, kill });
     const last = nodes[nodes.length - 1]; if (last) last.onended = () => { try { node.disconnect(); } catch { /* */ } };
   }
-  reset() { this.voices = []; this.last = {}; this.gemStreak = 0; this.dropped = 0; }
+  reset() { this.voices = []; this.last = {}; this.gemStreak = 0; this.gemRecent = 0; this.dropped = 0; }
   /** Reset gem streak (e.g. after a pause). */
   resetStreak() { this.gemStreak = 0; }
 }
