@@ -2,6 +2,10 @@ name: CI
 on:
   push: { branches: [main] }
   pull_request:
+# Newer pushes to the same PR/branch cancel the older run (main is never cancelled).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,13 +13,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm install --no-audit --no-fund
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run test:determinism
       - run: npm run build
       - run: docker build -t horde-game .
+      - id: pw
+        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        id: pwcache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ steps.pw.outputs.v }}
       - run: npx playwright install --with-deps chromium
+        if: steps.pwcache.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps chromium
+        if: steps.pwcache.outputs.cache-hit == 'true'
       - run: npm test
         env: { CI: '1' }
       - name: Summarize perf/playthrough
