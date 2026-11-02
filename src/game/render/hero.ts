@@ -13,7 +13,8 @@ export function createHero(opts: { scale?: number; lights?: boolean } = {}): Her
     const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); m.castShadow = true; g.add(m); return m;
   };
   add(new THREE.ConeGeometry(0.62, 1.8, 6), dark, 0, 0.9, 0);                            // cloak
-  const hem = add(new THREE.TorusGeometry(0.6, 0.035, 4, 12), cyanMat, 0, 0.06, 0, Math.PI / 2); hem.castShadow = false; // glowing hem
+  const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3df2ff).multiplyScalar(3), toneMapped: false }); // brighter, thicker foot ring so the hero is findable in clutter
+  const hem = add(new THREE.TorusGeometry(0.66, 0.07, 4, 16), ringMat, 0, 0.06, 0, Math.PI / 2); hem.castShadow = false; // glowing hem
   add(new THREE.IcosahedronGeometry(0.23, 0), dark, 0, 1.92, 0);                         // head
   add(new THREE.ConeGeometry(0.3, 0.5, 6), dark, 0, 2.1, -0.02);                         // hood
   for (const sx of [-0.09, 0.09]) { const e = add(new THREE.BoxGeometry(0.07, 0.05, 0.05), cyanMat, sx, 1.9, 0.2); e.castShadow = false; } // eyes
