@@ -1,0 +1,6 @@
+# Infra files are owned by DevOps/Launch Lead
+/fly.toml @tomasgpastore
+/Dockerfile @tomasgpastore
+/DEPLOY.md @tomasgpastore
+/.github/workflows/deploy.yml @tomasgpastore
+/.github/CODEOWNERS @tomasgpastore
