@@ -27,7 +27,7 @@ async function initTitle() { // live 3D backdrop: lazy chunk, skipped for low qu
 const screens = {
   loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div><div class="hints" id="tip"></div>`),
   menu: mk('hidden menu', `<h1>EMBERHORDE</h1><p class="tag">Survive the swarm. Build the impossible.</p>
-    <button class="btn primary" data-a="play">Play</button><button class="btn" data-a="coop">Co-op</button>
+    <button class="btn primary" data-a="play">Play</button>
     <button class="btn" data-a="settings">Settings</button><button class="btn" data-a="credits">Credits</button>
     <div class="hints" id="hints"></div>`),
   settings: mk('hidden', `<div class="panel"><h2>Settings</h2>
@@ -86,8 +86,8 @@ let lastHover = null;
 root.addEventListener('pointerover', e => { const b = e.target.closest?.('.btn'); if (b && b !== lastHover) ui?.ui('hover'); lastHover = b || null; });
 root.addEventListener('click', async (e) => {
   const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play' || a === 'coop') musicTitle();
-  if (a === 'play' || a === 'coop') { mode = a === 'coop' ? 'coop' : 'solo'; if (title) { for (const b of root.querySelectorAll('.btn')) b.disabled = true; await title.transitionOut(); for (const b of root.querySelectorAll('.btn')) b.disabled = false; } show(); game.quit(); game.start({ mode }); setState('playing'); title?.reveal(); }
+  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play') musicTitle();
+  if (a === 'play') { mode = 'solo'; if (title) { for (const b of root.querySelectorAll('.btn')) b.disabled = true; await title.transitionOut(); for (const b of root.querySelectorAll('.btn')) b.disabled = false; } show(); game.quit(); game.start({ mode }); setState('playing'); title?.reveal(); }
   else if (a === 'settings') { show('settings'); screens.settings.dataset.from = 'menu'; }
   else if (a === 'psettings') { show('settings'); screens.settings.dataset.from = 'pause'; }
   else if (a === 'credits') show('credits');
