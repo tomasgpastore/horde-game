@@ -24,7 +24,7 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
       stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 3, cooldownMult: 1 }, dead: false };
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
-    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, eliteCount: 0, swarmCount: 0, levelChoices: [],
+    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, eliteCount: 0, swarmCount: 0, biomeT0: 0, biome: 0, bossReward: false, levelChoices: [],
     boss: null, spawner: { budget: 0, nextSurge: 14, lastWave: 0, boss: false } };
 }
 

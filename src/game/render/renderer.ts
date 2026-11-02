@@ -28,15 +28,28 @@ export class Renderer {
   composer: EffectComposer; bloomOn = new URLSearchParams(location.search).get('bloom') !== '0'; // ?bloom=0 for software-GL CI shake = 0;
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
+  /** Swap the whole biome in place (boss kill -> next arena): scenery, boundary, fog/sky, sun, occluders. */
+  setArena(def: ArenaDef) {
+    this.arena.dispose(); this.disposeBoundary();
+    if (this.sun) { this.scene.remove(this.sun.target); this.sun = null; }
+    const before = new Set(this.scene.children);
+    this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
+    this.arena = def.build(this.scene); this.disposeBoundary = buildBoundary(this.scene, def); this.rig.maxR = def.radius - 9; this.arenaId = def.id;
+    const fresh = this.scene.children.filter(o => !before.has(o));
+    let found: THREE.DirectionalLight | null = null; for (const r of fresh) r.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !found) found = o as THREE.DirectionalLight; });
+    this.sun = found; const sun = this.sun as THREE.DirectionalLight | null;
+    if (sun) { this.sunOff.copy(sun.position); this.scene.add(sun.target); const sc = sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); sun.shadow.mapSize.set(2048, 2048); sun.shadow.normalBias = 0.04; }
+    this.occ = new OccluderFader(this.scene, fresh); this.rig.snap();
+  }
   setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
     const pr = Math.min(devicePixelRatio, q === 'low' ? 1.25 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight);
     const sh = q !== 'low'; if (this.three.shadowMap.enabled !== sh) { this.three.shadowMap.enabled = sh; this.scene.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (m) [m].flat().forEach(x => x.needsUpdate = true); }); } }
-  occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
+  disposeBoundary: () => void = () => {}; arenaId = ''; occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
     this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
-    this.arena = def.build(this.scene); buildBoundary(this.scene, def); this.rig.maxR = def.radius - 9;
+    this.arena = def.build(this.scene); this.disposeBoundary = buildBoundary(this.scene, def); this.rig.maxR = def.radius - 9; this.arenaId = def.id;
     this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene);
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }

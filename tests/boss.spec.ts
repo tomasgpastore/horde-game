@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test('boss spawns, telegraphs, charges, dies -> victory', async ({ page }, info) => {
+test('boss spawns, telegraphs, charges, dies -> reward card (biome chain: see biomes.spec)', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(String(e)));
   await page.goto('/?seed=9&bloom=0'); await page.click('button[data-a=play]'); await page.waitForTimeout(500);
   const r = await page.evaluate(() => {
@@ -10,5 +10,5 @@ test('boss spawns, telegraphs, charges, dies -> victory', async ({ page }, info)
     const had = !!s.boss; if (s.boss) s.enemies.alive[s.boss.idx] = 0; g.sim.step([inp]); g.sim.step([inp]);
     return { had, hp0, modes: [...modes], phase: s.phase, ev: s.events.map((e: any) => e.t) };
   });
-  console.log(JSON.stringify(r)); expect(r.had).toBe(true); expect(r.modes).toContain(2); expect(r.phase).toBe('gameOver'); expect(errors).toEqual([]);
+  console.log(JSON.stringify(r)); expect(r.had).toBe(true); expect(r.modes).toContain(2); expect(r.phase).toBe('levelUp'); expect(errors).toEqual([]);
 });

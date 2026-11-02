@@ -3,6 +3,7 @@ import { alloc } from '../pools';
 import { MAX_ENEMIES } from '@shared/types';
 import { BOSSES, BOSS_KIND } from '../content/enemies';
 import { spawnGem } from './projectiles';
+import { NEXT_ARENA } from '@world/waves';
 /** Boss encounter: spawns on 'bossSpawn' (emitted by World's spawner), chase → red telegraph → charge cycle, death → bossDeath + victory. */
 export const bossSystem: System = { name: 'boss', update(s, c) {
   const e = s.enemies, p = s.players[0];
@@ -18,7 +19,10 @@ export const bossSystem: System = { name: 'boss', update(s, c) {
   if (!e.alive[i] || e.kind[i] !== BOSS_KIND) { // killed
     s.events.push({ t: 'bossDeath', x: e.x[i], z: e.z[i], bossId: b.id }, { t: 'freeze', ms: 120 });
     for (let k = 0; k < 12; k++) spawnGem(s, e.x[i] + Math.cos(k) * 1.2, e.z[i] + Math.sin(k) * 1.2, 5);
-    s.boss = null; s.phase = 'gameOver'; s.events.push({ t: 'gameOver', victory: true }); return;
+    const next = NEXT_ARENA[c.arena.id]; s.boss = null;
+    if (next) { s.events.push({ t: 'biome', next }); s.bossReward = true; p.xp = p.xpToNext; p.hp = Math.min(p.maxHp, p.hp + 40); } // reward card (evolution) then the client swaps biome
+    else { s.phase = 'gameOver'; s.events.push({ t: 'gameOver', victory: true }); }
+    return;
   }
   b.t += c.dt; const dx = p.x - e.x[i], dz = p.z - e.z[i], dist = Math.hypot(dx, dz) || 1;
   if (b.mode === 0) { e.x[i] += dx / dist * d.speed * c.dt; e.z[i] += dz / dist * d.speed * c.dt; e.facing[i] = Math.atan2(dx, dz);

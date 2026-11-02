@@ -32,15 +32,16 @@ export const upgradeDef = (id: string): UpgradeDef => {
   if (id.startsWith('e:')) { const w = id.slice(2), e = EVOLUTIONS[w]; return { id, name: `EVOLVE: ${e.name}`, desc: `${UPGRADES.find(u => u.id === 'w:' + w)!.name} supercharged (+${EVOLVE_LEVELS} levels)` }; }
   return UPGRADES.find(u => u.id === id)!;
 };
-function evolutions(p: PlayerState): string[] {
-  return p.weapons.filter(w => !w.evolved && w.level >= MAX_WEAPON_LEVEL && EVOLUTIONS[w.id]?.has(p)).map(w => 'e:' + w.id);
+function evolutions(p: PlayerState, boss = false): string[] {
+  // boss chest: any weapon at level >= 4 may evolve (no passive needed); normal: max level + paired passive
+  return p.weapons.filter(w => !w.evolved && EVOLUTIONS[w.id] && (boss ? w.level >= 4 : w.level >= MAX_WEAPON_LEVEL && EVOLUTIONS[w.id].has(p))).sort((a, b) => b.level - a.level).map(w => 'e:' + w.id);
 }
 function available(p: PlayerState): UpgradeDef[] {
   return UPGRADES.filter(u => !u.id.startsWith('w:') || (p.weapons.find(w => 'w:' + w.id === u.id)?.level ?? 0) < MAX_WEAPON_LEVEL);
 }
 /** Pick `n` distinct choices deterministically. */
-export function rollChoices(p: PlayerState, rng: Rng, n = 3): string[] {
-  const out: string[] = evolutions(p).slice(0, 1); // an available evolution always leads the offer
+export function rollChoices(p: PlayerState, rng: Rng, n = 3, boss = false): string[] {
+  const out: string[] = evolutions(p, boss).slice(0, 1); // an available evolution always leads the offer
   const pool = available(p).map(u => u.id);
   while (out.length < n && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
   return out;

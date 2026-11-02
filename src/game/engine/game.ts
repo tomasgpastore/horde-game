@@ -3,6 +3,7 @@ import { Sim, createState } from '@sim/index';
 import { Renderer } from '@render/renderer';
 import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
+import { ARENA_BOSS } from '@world/waves';
 import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
@@ -25,13 +26,31 @@ export class Game {
   }
   reset(seedOverride?: number) {
     const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = seedOverride ?? (Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff));
-    this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
+    this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0; this.pendingBiome = null;
+    if (this.renderer && this.renderer.arenaId !== arena.id) this.renderer.setArena(arena); // Quit/restart after a biome chain: back to the first biome
   }
-  choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
+  pendingBiome: string | null = null;
+  /** Sim events that drive client-side flow (hit-stop, slow-mo, biome chain). Called after every sim step (also from tests). */
+  onSimEvents(events: import('@shared/types').SimEvent[]) { for (const ev of events) if (ev.t === 'biome') this.pendingBiome = ev.next; else if (ev.t === 'freeze') this.hitstop = Math.max(this.hitstop, ev.ms / 1000); else if (ev.t === 'slow') this.renderer.slowmo = Math.max(this.renderer.slowmo, ev.secs); }
+  choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); if (this.pendingBiome && this.sim.state.phase !== 'levelUp') this.enterBiome(); } }
+  /** Boss killed + reward card picked: swap to the next biome, keep the run going (kill The Unlit to win). */
+  enterBiome() {
+    const next = this.pendingBiome; this.pendingBiome = null; if (!next) return;
+    const s = this.sim.state, p = s.players[0], arena = getArena(next); this.sim.arena = arena; this.renderer.setArena(arena);
+    const e = s.enemies, pr = s.projectiles, pk = s.pickups; e.alive.fill(0); pr.alive.fill(0); pk.alive.fill(0);
+    p.x = 0; p.z = 0; p.vx = p.vz = 0; p.iframes = 2; s.spawner.boss = false; s.spawner.budget = 0; s.biomeT0 = s.time; s.biome++;
+    this.titleCard(arena.name, `Biome ${s.biome + 1} of 3`);
+  }
+  titleCard(name: string, sub: string) {
+    const d = document.createElement('div'); d.style.cssText = 'position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;font:700 54px Rajdhani,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#fff;text-shadow:0 0 24px #4de8ff,0 3px 6px #000;opacity:0;transition:opacity .6s';
+    d.innerHTML = `<div style="font-size:20px;letter-spacing:.5em;color:#9fe8ff">Entering</div>${name}<div style="font-size:18px;letter-spacing:.4em;color:#ffc857;margin-top:6px">${sub}</div>`;
+    this.ui.appendChild(d); requestAnimationFrame(() => { d.style.opacity = '1'; }); setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 700); }, 2800);
+  }
   start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.fastForward(Number(new URLSearchParams(location.search).get('t')) || 0); this.last = performance.now(); audio.resume(); this.audio.startRun(); }
   /** Debug hook ?t=N: simulate N seconds instantly with the bot (invulnerable, auto-picks cards) so trailer/OG shots can show mid/late-game density (?t=300 = boss). */
   fastForward(seconds: number) {
     if (seconds <= 0) return; const s = this.sim.state, p = s.players[0]; let guard = 0;
+    s.biomeT0 = Math.max(0, seconds - (ARENA_BOSS[this.sim.arena.id]?.time ?? 300)); // ?arena=X&t=N → that biome's boss arrives right at t=N
     while (s.time < seconds + 0.05 && s.phase !== 'gameOver' && guard++ < 60 * 60 * 20) { p.iframes = 1e9; if (s.phase === 'levelUp') { this.sim.choose(s.tick % 3); continue; } this.sim.step([this.bot(p)]); }
     p.iframes = 1; p.hp = p.maxHp; this.renderer.rig.snap();
   }
@@ -86,7 +105,7 @@ export class Game {
       if (this.hitstop > 0) { this.hitstop -= dt; this.acc = 0; }
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
-        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); for (const ev of this.sim.state.events) if (ev.t === 'freeze') this.hitstop = Math.max(this.hitstop, ev.ms / 1000); else if (ev.t === 'slow') this.renderer.slowmo = Math.max(this.renderer.slowmo, ev.secs);
+        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); this.onSimEvents(this.sim.state.events);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
     }

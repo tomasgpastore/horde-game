@@ -13,12 +13,14 @@ export const MAX_ALIVE = 400;
 /** Runtime cap (Low quality lowers it; set via Game.applySettings). */
 export const limits = { maxAlive: MAX_ALIVE };
 export const WAVE_SECONDS = 40;
-/** Per-arena boss: emitted as bossSpawn at `time` seconds (GDD: min 5/10/15). */
+/** Per-biome boss: emitted as bossSpawn `time` seconds AFTER the biome started (SimState.biomeT0) — GDD: ~5/10/15 min for a steady run. */
 export const ARENA_BOSS: Record<string, { bossId: string; time: number }> = {
   ashen_woods: { bossId: 'hollow_stag', time: 300 },
-  drowned_cathedral: { bossId: 'bell_warden', time: 600 },
-  void_garden: { bossId: 'the_unlit', time: 900 },
+  drowned_cathedral: { bossId: 'bell_warden', time: 270 },
+  void_garden: { bossId: 'the_unlit', time: 270 },
 };
+/** Run order: killing a biome's boss opens the next biome; killing The Unlit wins the run. */
+export const NEXT_ARENA: Record<string, string | null> = { ashen_woods: 'drowned_cathedral', drowned_cathedral: 'void_garden', void_garden: null };
 const MIXES: SpawnEntry[][] = [
   [{ kind: 0, weight: 1 }],
   [{ kind: 0, weight: 3 }, { kind: 1, weight: 1 }],
