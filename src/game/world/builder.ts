@@ -129,12 +129,12 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   const rimN = Math.round(R * 2.6);
   for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.4, 3) * (1 - 0.4 * Math.max(0, Math.sin(a))) * (1 - 0.35 * Math.abs(Math.cos(a)) * Math.min(1, Math.max(0, 1 + 2 * Math.sin(a))));
     push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : Math.min(s * rng.range(1.5, 3.2), 3 + 14 * Math.min(1, Math.max(0, (-sn - 0.35) / 0.35))))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
-  { const fl = buckets.get('brazier'); if (fl) buckets.set('flame', fl.map(l => ({ m: l.m, c: new THREE.Color(0xffb866) }))); } // dim bowl + small bright flame core per brazier
+  { const fl = buckets.get('brazier'); if (fl) buckets.set('flame', fl.map(l => ({ m: l.m, c: new THREE.Color(b.glowColor).lerp(new THREE.Color(0xffffff), 0.3) }))); } // dim bowl + small bright flame core per brazier
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.3 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
-    if (emissive) { mat.userData.k = k === 'brazier' ? 0.3 : k === 'flame' ? 1.8 : 1; glowMats.push(mat); }
+    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.1 : k === 'shroom' || k === 'flower' ? 0.25 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
+    if (emissive) { mat.userData.k = k === 'brazier' ? 0.1 : k === 'flame' ? 0.5 : k === 'shroom' || k === 'flower' ? 0.25 : 1; glowMats.push(mat); }
     const im = new THREE.InstancedMesh(g, mat, lst.length); lst.forEach((l, i) => { im.setMatrixAt(i, l.m); im.setColorAt(i, l.c); });
     if (k === 'shard') shards = im; im.castShadow = k !== 'bone' && k !== 'shard'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
   }

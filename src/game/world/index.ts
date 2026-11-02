@@ -24,11 +24,11 @@ const drownedCathedral = make('drowned_cathedral', 'Drowned Cathedral', 46,
     hemiSky: 0x80ffd8, groundNoise: [0x2f4a42, 0x3f6a58], fog: { count: 110, color: 0x6fd0b0, opacity: 0.14 }, lightIntensity: 1.5, sunDir: [-12, 22, 10] });
 
 const voidGarden = make('void_garden', 'Void Garden', 32,
-  { ground: 0x2e2026, fog: 0x2a0d10, sky: 0x1c080b, accent: 0xff3b2f, light: 0xffa070 },
+  { ground: 0x1a1030, fog: 0x160a2c, sky: 0x0c0618, accent: 0xc04dff, light: 0xcdb8ff },
   { seed: 303, obstacleKinds: ['pillar', 'rock'], obstacleCount: 12, obstacleR: [1.4, 1.8], clearRadius: 12,
     scatter: [{ kind: 'flower', count: 140, scale: [0.6, 1.2] }, { kind: 'shard', count: 28, scale: [0.6, 1.2] }, { kind: 'brazier', count: 24, scale: [0.9, 1.2] }, { kind: 'rock', count: 100, scale: [0.2, 0.5] }, { kind: 'bone', count: 80, scale: [0.6, 1.4] }],
-    propColors: [0x2a1f26, 0x3a2a30, 0x4a2a2a], glowColor: 0xff3b2f, ember: { count: 700, color: 0xff5a2a, rise: 2.4, size: 0.6 },
-    hemiSky: 0xff8080, groundNoise: [0x2e2026, 0x5a2025], fog: { count: 60, color: 0xc03040, opacity: 0.12 }, ring: { color: 0xff3b2f, r: 14 }, lightIntensity: 1.6, sunDir: [6, 24, 12] });
+    propColors: [0x1e1440, 0x2a1c58, 0x38226e, 0x4a2a80], glowColor: 0xc04dff, ember: { count: 700, color: 0xe070ff, rise: 2.4, size: 0.6 },
+    hemiSky: 0xa890ff, groundNoise: [0x120a24, 0x2a1850], fog: { count: 60, color: 0x7a40d0, opacity: 0.14 }, ring: { color: 0xc04dff, r: 14 }, lightIntensity: 1.6, sunDir: [6, 24, 12] });
 
 const arenas: Record<string, ArenaDef> = Object.fromEntries([ashenWoods, drownedCathedral, voidGarden].map(a => [a.id, a]));
 export const ARENA_IDS = Object.keys(arenas);

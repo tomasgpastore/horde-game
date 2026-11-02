@@ -18,8 +18,14 @@ function rig() {
   const glow = (c: number) => { const m = glowMat(c); glows.push(m); return m; };
   return { group, glows, bodies, add, body, glow };
 }
-function finish(r: ReturnType<typeof rig>, radius: number, glowColor: number, anim: (t: number, hp: number, tel: number) => void): Boss {
+function finish(r: ReturnType<typeof rig>, radius: number, glowColor: number, anim: (t: number, hp: number, tel: number) => void, baseScale = 1): Boss {
   const base = new THREE.Color(glowColor).multiplyScalar(1.8), hot = new THREE.Color(0xffffff).multiplyScalar(3);
+  { // fresnel rim: a bright silhouette edge in the boss colour so a dark body still reads against the dark floor / horde (Artist)
+    const rimColor = new THREE.Color(glowColor);
+    for (const m of r.bodies) { m.onBeforeCompile = sh => { sh.uniforms.rimColor = { value: rimColor };
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 rimColor;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += rimColor * pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), 2.6) * 2.0;'); }; m.needsUpdate = true; }
+  }
   const lights = new THREE.PointLight(glowColor, 20, 16, 1.6); lights.position.set(0, 3, 0); r.group.add(lights);
   return {
     group: r.group, radius,
@@ -28,7 +34,7 @@ function finish(r: ReturnType<typeof rig>, radius: number, glowColor: number, an
       const k = Math.min(1, tel);
       for (const g of r.glows) g.color.copy(base).lerp(hot, k * (0.5 + 0.5 * Math.sin(t * 30))).multiplyScalar(1 + hp * 0.6);
       lights.intensity = 20 + hp * 20 + k * 40;
-      r.group.scale.setScalar(1 + k * 0.06 * Math.sin(t * 40));
+      r.group.scale.setScalar(baseScale * (1 + k * 0.06 * Math.sin(t * 40)));
     },
     flash(on) { for (const m of r.bodies) m.emissiveIntensity = on ? 2.5 : 0.15; },
   };
@@ -91,10 +97,10 @@ function unlit(): Boss {
   const shards: THREE.Mesh[] = [];
   for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; shards.push(add(new THREE.OctahedronGeometry(0.5), i % 2 ? violet : magenta, Math.cos(a) * 3.6, Math.sin(i) * 0.6, Math.sin(a) * 3.6, 0, 0, 0, orbit)); }
   const ring = add(new THREE.TorusGeometry(3.6, 0.04, 4, 48), violet, 0, 3.5, 0, Math.PI / 2);
-  return finish(r, 2.6, 0xc04dff, (t, hp, tel) => {
+  return finish(r, 3.4, 0xc04dff, (t, hp, tel) => {
     r.group.position.y = Math.sin(t * 1.4) * 0.25; core.rotation.y = t * 0.3; orbit.rotation.y = -t * (0.8 + hp * 1.2 + tel * 3);
     shards.forEach((s, i) => { s.rotation.x = t * 2 + i; s.rotation.y = t * 1.5; }); ring.rotation.z = t * 0.2; ring.scale.setScalar(1 + tel * 0.25);
-  });
+  }, 1.3); // 1.3x: the Unlit was small in the horde
 }
 
 export const BOSS_COLORS: Record<BossId, number> = { hollow_stag: 0xff6a2b, bell_warden: 0x19c9a5, the_unlit: 0xc04dff };

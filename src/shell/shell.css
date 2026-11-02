@@ -67,7 +67,7 @@ body:not(.scene-on) .screen.menu{background:radial-gradient(ellipse at 50% 35%,r
 body.in-menu #game>div{display:none!important} /* game HUD overlay (#game's ui div) hidden on title/loading */
 
 /* ---- results card ---- */
-.results{min-width:min(560px,92vw);padding:30px 36px 28px;text-align:center;border:2px solid #6a2a2a;border-radius:14px;background:linear-gradient(#1c1220ee,#0e0a14ee);box-shadow:0 0 50px rgba(255,58,42,.25);animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+.results{position:relative;z-index:1;min-width:min(560px,92vw);padding:30px 36px 28px;text-align:center;border:2px solid #6a2a2a;border-radius:14px;background:linear-gradient(#1c1220ee,#0e0a14ee);box-shadow:0 0 50px rgba(255,58,42,.25);animation:rise .5s cubic-bezier(.2,.8,.2,1)}
 .results.victory{border-color:#ffc857;box-shadow:0 0 60px rgba(255,200,87,.4)}
 .rtitle{font:700 clamp(40px,8vw,68px)/1 Rajdhani,system-ui,sans-serif;letter-spacing:.16em;color:#ff7a66;text-shadow:0 0 24px rgba(255,58,42,.6),0 4px 0 #2a0808}
 .results.victory .rtitle{color:#ffd35a;text-shadow:0 0 28px rgba(255,200,87,.7),0 4px 0 #3a2408}
@@ -92,3 +92,5 @@ body.in-menu #game>div{display:none!important} /* game HUD overlay (#game's ui d
 @keyframes emberfall{to{background-position:41px 520px,-29px 700px,101px 410px}}
 @keyframes emberrise{to{background-position:-30px -420px,40px -610px,-60px -300px}}
 @media (prefers-reduced-motion:reduce){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}
+.screen:has(.results) .results{position:relative;z-index:1}
+@media (pointer:coarse){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}

@@ -2,6 +2,7 @@ import type { SimState } from '@shared/types';
 import { BOSSES } from '@sim/content/enemies';
 import { upgradeDef } from '@sim/content/upgrades';
 import { iconSvg } from '../art/icons';
+import { mountTopHud } from './hudbar';
 const BASE = { damageMult: 1.15, cooldownMult: 0.9, moveSpeed: 1.1, pickupRadius: 1.35, area: 1.15 } as const;
 const BASE0 = { damageMult: 1, cooldownMult: 1, moveSpeed: 6, pickupRadius: 2.5, area: 1 };
 /** Icons come from the Artist's set only (art/icons.ts); unknown ids get a letter chip. */
@@ -13,6 +14,7 @@ function passives(st: Record<string, number>, maxHp: number): [string, number][]
     ['armor', Math.round((st.armor ?? 0) / 2)], ['luck', Math.round((st.luck ?? 0) / 0.05)], ['hp', Math.round((maxHp - 100) / 25)]] as [string, number][]).filter(x => x[1] > 0);
 }
 /** HUD + level-up cards. DOM overlay inside the game's own ui div. Gameplay/UI owner extends (lantern style, Rajdhani). */
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1'; // fps counter only with ?debug=1
 export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   const css = document.createElement('style');
   css.textContent = `.hud-top{position:absolute;left:0;right:0;top:0;padding:10px 14px;font:600 15px Rajdhani,system-ui,sans-serif;text-shadow:0 1px 3px #000;display:flex;gap:16px;align-items:center}
@@ -50,15 +52,15 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   const gw = gear.querySelector('#gw') as HTMLElement, gp = gear.querySelector('#gp') as HTMLElement; let gearKey = '';
   const boss = document.createElement('div'); boss.className = 'boss'; boss.style.display = 'none';
   boss.innerHTML = '<div class="bn"></div><div class="bt"><i class="lag"></i><i class="fill"></i><i class="notch" style="left:50%"></i><i class="notch" style="left:25%"></i></div>';
-  root.append(css, top, gear, xp, cards, boss); const bn = boss.querySelector('.bn') as HTMLElement, bf = boss.querySelector('.fill') as HTMLElement, bl = boss.querySelector('.lag') as HTMLElement; let lag = 100;
+  root.append(css, top, gear, xp, cards, boss); const tb = mountTopHud(root); const bn = boss.querySelector('.bn') as HTMLElement, bf = boss.querySelector('.fill') as HTMLElement, bl = boss.querySelector('.lag') as HTMLElement; let lag = 100;
   const hp = top.querySelector('.bar i') as HTMLElement, lv = top.querySelector('#h-lv')!, info = top.querySelector('#h-info')!, xpi = xp.firstChild as HTMLElement;
   let shown = '';
   const pick = (i: number) => onChoose(i);
   addEventListener('keydown', e => { if (cards.style.display === 'flex' && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) pick(+e.code.slice(5) - 1); });
   return { update(s: SimState, fps: number) {
-    const p = s.players[0];
+    const p = s.players[0]; tb.update(s, fps);
     hp.style.width = Math.max(0, p.hp / p.maxHp * 100) + '%'; xpi.style.width = Math.min(100, p.xp / p.xpToNext * 100) + '%';
-    lv.textContent = `LV ${p.level}`; info.textContent = `${Math.floor(s.time / 60)}:${String(Math.floor(s.time % 60)).padStart(2, '0')}   ☠ ${s.kills}   ${fps.toFixed(0)}fps`;
+    lv.textContent = `LV ${p.level}`; info.textContent = `${Math.floor(s.time / 60)}:${String(Math.floor(s.time % 60)).padStart(2, '0')}   ☠ ${s.kills}   ${DEBUG ? "   " + fps.toFixed(0) + "fps" : ""}`;
     if (s.boss) { boss.style.display = 'block'; bn.textContent = BOSSES[s.boss.id]?.name ?? 'Boss'; const pct = Math.max(0, s.enemies.hp[s.boss.idx] / s.boss.maxHp * 100);
       lag = pct >= lag ? pct : Math.max(pct, lag - 0.35); bf.style.width = pct + '%'; bl.style.width = lag + '%'; } else { boss.style.display = 'none'; lag = 100; }
     const ps = passives(p.stats, p.maxHp), gk = p.weapons.map(w => w.id + w.level).join() + '|' + ps.join();

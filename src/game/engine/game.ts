@@ -28,7 +28,13 @@ export class Game {
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
   choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
-  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); audio.resume(); this.audio.startRun(); }
+  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.fastForward(Number(new URLSearchParams(location.search).get('t')) || 0); this.last = performance.now(); audio.resume(); this.audio.startRun(); }
+  /** Debug hook ?t=N: simulate N seconds instantly with the bot (invulnerable, auto-picks cards) so trailer/OG shots can show mid/late-game density (?t=300 = boss). */
+  fastForward(seconds: number) {
+    if (seconds <= 0) return; const s = this.sim.state, p = s.players[0]; let guard = 0;
+    while (s.time < seconds + 0.05 && s.phase !== 'gameOver' && guard++ < 60 * 60 * 20) { p.iframes = 1e9; if (s.phase === 'levelUp') { this.sim.choose(s.tick % 3); continue; } this.sim.step([this.bot(p)]); }
+    p.iframes = 1; p.hp = p.maxHp; this.renderer.rig.snap();
+  }
   pause() { this.paused = true; audio.suspend(); } resume() { this.paused = false; this.last = performance.now(); audio.resume(); }
   quit() { this.running = false; this.paused = false; this.reset(); audio.resume(); this.audio.stop(); } // un-suspend (Quit while paused) and clear run music; shell then plays the title theme
   applySettings(s: Settings) {
