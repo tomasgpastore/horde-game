@@ -11,6 +11,7 @@
 | Tool | sharp, @gltf-transform/*, meshoptimizer | Lovell Fuller / Don McCurdy / Arseny Kapoulkine | Apache-2.0 / MIT / MIT | https://github.com/lovell/sharp | Asset pipeline (`npm run assets`), build-time only | Web |
 | Tool | ffmpeg-static (ffmpeg binary) | Eugene Sharygin / FFmpeg team | GPL-3.0 binary, used build-time only, not shipped | https://github.com/eugeneware/ffmpeg-static | Audio transcode in `npm run assets` (only if raw audio is added) | Web |
 | Tool | Playwright | Microsoft | Apache-2.0 | https://github.com/microsoft/playwright | Tests, screenshots, footage capture | QA |
+| Code | three.js examples (EffectComposer, UnrealBloomPass, OutputPass, BufferGeometryUtils) | mrdoob & contributors | MIT | https://github.com/mrdoob/three.js/tree/dev/examples/jsm | Post-processing bloom/vignette, geometry merging (ships with three; no new asset) | Engine |
 | *(add rows)* | | | | | | |
 
 ## CC-BY attribution text (shown in-game Credits screen)
