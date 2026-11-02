@@ -12,6 +12,7 @@ import { eliteSystem } from './systems/elites';
 import { gridSystem } from './systems/grid';
 import { weaponSystem } from './systems/weapons';
 import { projectileSystem } from './systems/projectiles';
+import { abilitySystem } from './systems/ability';
 import { pickupSystem } from './systems/pickups';
 import { MAX_WEAPON_LEVEL } from './content/weapons';
 import { applyUpgrade } from './content/upgrades';
@@ -30,7 +31,7 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
 
 /** Deterministic fixed-step simulation. Same (seed, input stream) => same state. Runs in browser now, Node server later. */
 export class Sim {
-  rng: Rng; systems: System[] = [spawner, eliteSystem, swarmSystem, playerSystem, gridSystem, weaponSystem, projectileSystem, enemySystem, bossSystem, arenaCollision, pickupSystem];
+  rng: Rng; systems: System[] = [spawner, eliteSystem, swarmSystem, playerSystem, abilitySystem, gridSystem, weaponSystem, projectileSystem, enemySystem, bossSystem, arenaCollision, pickupSystem];
   constructor(public state: SimState, public arena: ArenaDef) { this.rng = new Rng(state.seed); }
   register(sys: System, before?: string) {
     const i = before ? this.systems.findIndex(s => s.name === before) : -1;
