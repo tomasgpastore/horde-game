@@ -8,7 +8,7 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 
 ## Features
 - 6 weapons: Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears
-- 6 weapon evolutions unlocked by pairing a weapon with its passive
+- Weapons evolve at level 8 when paired with the right passive
 - Elites every 40s (from 0:50) that drop chests
 - A boss at 5:00 (the Hollow Stag)
 - Solo only (no co-op)
