@@ -13,6 +13,7 @@ await MeshoptEncoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });
 let inB = 0, outB = 0;
 for (const f of walk(SRC)) {
+  if (f.endsWith('README.md')) continue;
   const rel = path.relative(SRC, f), ext = path.extname(f).toLowerCase(), base = rel.slice(0, -ext.length);
   let out = null, run = null;
   if (['.png', '.jpg', '.jpeg'].includes(ext)) { out = path.join(OUT, base + '.webp'); run = () => sharp(f).resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toFile(out); }
