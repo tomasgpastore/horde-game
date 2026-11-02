@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { ArenaDef, ArenaHandle } from '@shared/types';
 import { Rng } from '@shared/rng';
 
-export type PropKind = 'rock' | 'pillar' | 'crystal' | 'shroom' | 'bone' | 'brazier' | 'tree' | 'flower' | 'shard' | 'arch';
+export type PropKind = 'rock' | 'pillar' | 'crystal' | 'shroom' | 'bone' | 'brazier' | 'tree' | 'flower' | 'shard' | 'arch' | 'flame';
 export interface Biome {
   seed: number;
   obstacleKinds: PropKind[];       // how colliders are drawn
@@ -48,6 +48,7 @@ const geo: Record<PropKind, () => THREE.BufferGeometry> = {
   arch: () => { const l = new THREE.CylinderGeometry(0.5, 0.65, 4.5, 6); l.translate(-1.6, 2.25, 0);
     const r = new THREE.CylinderGeometry(0.5, 0.65, 3, 6); r.translate(1.6, 1.5, 0);
     const top = new THREE.BoxGeometry(4.2, 0.6, 0.9); top.rotateZ(0.12); top.translate(0, 4.4, 0); return merge(merge(l, r), top); },
+  flame: () => { const g = new THREE.OctahedronGeometry(0.42, 0); g.scale(0.8, 1.4, 0.8); g.translate(0, 2.25, 0); return g; }, // small bright core above the bowl
   brazier: () => { const bowl = new THREE.CylinderGeometry(0.9, 0.5, 0.7, 6); bowl.translate(0, 1.6, 0);
     const leg = new THREE.CylinderGeometry(0.15, 0.25, 1.4, 5); leg.translate(0, 0.7, 0); return merge(bowl, leg); },
 };
@@ -56,7 +57,7 @@ function merge(a: THREE.BufferGeometry, b: THREE.BufferGeometry) {
   pos.set(ai.attributes.position.array as Float32Array, 0); pos.set(bi.attributes.position.array as Float32Array, ai.attributes.position.count * 3);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
 }
-const EMISSIVE: PropKind[] = ['crystal', 'brazier', 'flower', 'shard'];
+const EMISSIVE: PropKind[] = ['crystal', 'brazier', 'flower', 'shard', 'flame'];
 
 /** One non-repeating 1024px map over the whole disc (+ emissive map for glowing cracks). */
 function groundTextures(b: Biome, p: ArenaDef['palette'], R: number) {
@@ -111,7 +112,7 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   // instanced props: one InstancedMesh per kind (collider-drawn + scatter + rim)
   const buckets = new Map<PropKind, { m: THREE.Matrix4; c: THREE.Color }[]>();
   // Unit-scale heights; props inside the playfield are capped so they never occlude the hero/camera view. Rim props (lift<0 / outside R-6) stay tall.
-  const H: Record<PropKind, number> = { rock: 1.3, pillar: 5, crystal: 3, shroom: 2, bone: 2, brazier: 2, tree: 5, flower: 1.75, shard: 4.5, arch: 4.7 };
+  const H: Record<PropKind, number> = { rock: 1.3, pillar: 5, crystal: 3, shroom: 2, bone: 2, brazier: 2, tree: 5, flower: 1.75, shard: 4.5, arch: 4.7, flame: 2 };
   const push = (k: PropKind, x: number, z: number, sx: number, sy: number, ry: number, col: number, lift = 0) => {
     if (Math.hypot(x, z) < R - 6) { const cap = Math.hypot(x, z) < PLAY_R ? 1.2 : k === 'rock' ? 1.6 : k === 'shard' ? 2.6 : 3; sy = Math.min(sy, cap / H[k]); if (k === 'shard') lift = Math.max(lift, 0); }
     const o = new THREE.Object3D(); o.position.set(x, lift, z); o.rotation.set(0, ry, 0); o.scale.set(sx, sy, sx); o.updateMatrix();
@@ -126,13 +127,14 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   }
   // rim wall: tall jagged rocks just outside the playable edge
   const rimN = Math.round(R * 2.6);
-  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.8, 4) * (1 - 0.4 * Math.max(0, Math.sin(a)));
-    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : s * rng.range(1.5, 3.2))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.4, 3) * (1 - 0.4 * Math.max(0, Math.sin(a))) * (1 - 0.35 * Math.abs(Math.cos(a)) * Math.min(1, Math.max(0, 1 + 2 * Math.sin(a))));
+    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : Math.min(s * rng.range(1.5, 3.2), 3 + 14 * Math.min(1, Math.max(0, (-sn - 0.35) / 0.35))))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  { const fl = buckets.get('brazier'); if (fl) buckets.set('flame', fl.map(l => ({ m: l.m, c: new THREE.Color(0xffb866) }))); } // dim bowl + small bright flame core per brazier
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? 0.9 : 0 });
-    if (emissive) glowMats.push(mat);
+    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.3 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
+    if (emissive) { mat.userData.k = k === 'brazier' ? 0.3 : k === 'flame' ? 1.8 : 1; glowMats.push(mat); }
     const im = new THREE.InstancedMesh(g, mat, lst.length); lst.forEach((l, i) => { im.setMatrixAt(i, l.m); im.setColorAt(i, l.c); });
     if (k === 'shard') shards = im; im.castShadow = k !== 'bone' && k !== 'shard'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
   }
@@ -170,7 +172,7 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
         let y = ep[i * 3 + 1] + E.rise * sp * dt; if (y > 14) y -= 14;
         ep[i * 3 + 1] = y; ep[i * 3] += Math.sin(t * 0.7 + ph) * 0.6 * dt; ep[i * 3 + 2] += Math.cos(t * 0.6 + ph) * 0.6 * dt; }
       a.needsUpdate = true;
-      const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse;
+      const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse * m.userData.k;
       if (edge) edge.opacity = 0.35 + Math.sin(t * 1.5) * 0.12;
       if (shards) shards.position.y = Math.sin(t * 0.8) * 0.35;
       if (mist && mp) { const ma = mist.geometry.attributes.position as THREE.BufferAttribute;

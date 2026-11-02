@@ -10,6 +10,9 @@ const ICONS: Record<string, string> = {
   'p:haste': wrap('#ffd35a', `<circle cx="32" cy="34" r="18" fill="none" stroke="#ffd35a" stroke-width="3"/><polyline points="32,22 32,34 41,40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><polygon points="26,8 38,8 32,14" fill="#ffd35a"/>`),
   'p:speed': wrap('#3df2ff', `<polygon points="10,40 36,16 36,28 54,28 28,52 28,40" fill="url(#f@)" stroke="#bff" stroke-width="1.5"/><path d="M6 24H20M4 32H16" stroke="#3df2ff" stroke-width="3" stroke-linecap="round"/>`),
   'p:magnet': wrap('#ff2e88', `<path d="M16 14V34a16 16 0 0 0 32 0V14" fill="none" stroke="#ff2e88" stroke-width="9"/><rect x="11.5" y="10" width="9" height="9" fill="#fff"/><rect x="43.5" y="10" width="9" height="9" fill="#fff"/><polygon points="32,6 35,12 29,12" fill="#3df2ff"/>`),
+  'p:armor': wrap('#9fb4ff', `<path d="M32 8L52 16V32C52 44 43 53 32 57C21 53 12 44 12 32V16Z" fill="url(#f@)" stroke="#dfe7ff" stroke-width="1.8"/><path d="M32 8V57" stroke="#dfe7ff" stroke-width="1.2"/>`),
+  'p:area': wrap('#3df2ff', `<circle cx="32" cy="32" r="8" fill="#fff"/><circle cx="32" cy="32" r="16" fill="none" stroke="#3df2ff" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#3df2ff" stroke-opacity=".55" stroke-width="2.5" stroke-dasharray="6 5"/>`),
+  'p:luck': wrap('#ffd35a', `<polygon points="32,6 40,24 58,26 44,38 48,56 32,46 16,56 20,38 6,26 24,24" fill="url(#f@)" stroke="#fff3c0" stroke-width="1.5"/><circle cx="32" cy="32" r="5" fill="#fff"/>`),
   'p:hp': wrap('#b6ff3b', `<polygon points="32,54 10,30 10,20 20,12 32,20 44,12 54,20 54,30" fill="url(#f@)" stroke="#e6ffb0" stroke-width="1.5"/><path d="M32 26V40M25 33H39" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>`),
 };
 export const iconSvg = (id: string): string => ICONS[id] ?? '';
