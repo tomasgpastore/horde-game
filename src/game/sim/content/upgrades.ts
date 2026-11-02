@@ -7,6 +7,8 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'w:orbit_blades', name: 'Orbit Blades', desc: 'Spectral blades circle you' },
   { id: 'w:frost_nova', name: 'Frost Nova', desc: 'Periodic burst that damages and shoves' },
   { id: 'w:chain_lightning', name: 'Chain Lightning', desc: 'Arcs between nearby enemies' },
+  { id: 'w:lava_trail', name: 'Lava Trail', desc: 'Leave burning ground behind you' },
+  { id: 'w:seeker_spears', name: 'Seeker Spears', desc: 'Homing spears hunt the nearest enemy' },
   { id: 'p:might', name: 'Might', desc: '+15% damage' },
   { id: 'p:haste', name: 'Haste', desc: '-10% weapon cooldown' },
   { id: 'p:speed', name: 'Swiftness', desc: '+10% move speed' },

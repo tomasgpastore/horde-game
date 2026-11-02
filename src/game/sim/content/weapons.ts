@@ -5,6 +5,8 @@ export const WEAPONS: Record<string, WeaponDef> = {
   orbit_blades: { id: 'orbit_blades', cooldown: 0, dmg: 5, speed: 0, life: 0, pierce: 0, range: 0 },
   frost_nova: { id: 'frost_nova', cooldown: 3.2, dmg: 9, speed: 0, life: 0, pierce: 0, range: 0 },
   chain_lightning: { id: 'chain_lightning', cooldown: 1.3, dmg: 10, speed: 0, life: 0, pierce: 0, range: 14 },
+  lava_trail: { id: 'lava_trail', cooldown: 0.22, dmg: 4, speed: 0, life: 3, pierce: 0, range: 0 },
+  seeker_spears: { id: 'seeker_spears', cooldown: 1.1, dmg: 9, speed: 11, life: 2.6, pierce: 1, range: 18 },
 };
 export const MAX_WEAPON_LEVEL = 8;
 /** projectiles per shot, damage and cooldown scaling by level */
@@ -18,3 +20,8 @@ export const orbitCount = (lvl: number) => 2 + Math.floor(lvl / 2);
 export const NOVA = { cooldown: 3.2, radius: 5.5, dmg: 9, knock: 2.5 };
 export const CHAIN = { cooldown: 1.3, dmg: 10, range: 6, first: 14 };
 export const chainJumps = (lvl: number) => 2 + Math.floor(lvl / 2);
+
+export const LAVA = { cooldown: 0.22, dmg: 4, radius: 1.1, hitCd: 0.4 };
+export const lavaLife = (lvl: number) => 2.4 + 0.2 * lvl;
+export const SPEARS = { cooldown: 1.1, dmg: 9, speed: 11, life: 2.6, range: 18, turn: 5 };
+export const spearCount = (lvl: number) => 2 + Math.floor(lvl / 3);
