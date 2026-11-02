@@ -106,7 +106,10 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   const hemi = new THREE.HemisphereLight(b.hemiSky ?? 0xaab4ff, new THREE.Color(p.ground).multiplyScalar(2.5), 1.6); add(sun); add(hemi);
   // instanced props: one InstancedMesh per kind (collider-drawn + scatter + rim)
   const buckets = new Map<PropKind, { m: THREE.Matrix4; c: THREE.Color }[]>();
+  // Unit-scale heights; props inside the playfield are capped so they never occlude the hero/camera view. Rim props (lift<0 / outside R-6) stay tall.
+  const H: Record<PropKind, number> = { rock: 1.3, pillar: 5, crystal: 3, shroom: 2, bone: 2, brazier: 2, tree: 5, flower: 1.75, shard: 4.5, arch: 4.7 };
   const push = (k: PropKind, x: number, z: number, sx: number, sy: number, ry: number, col: number, lift = 0) => {
+    if (Math.hypot(x, z) < R - 6) { const cap = k === 'rock' ? 1.6 : k === 'shard' ? 2.6 : 3; sy = Math.min(sy, cap / H[k]); if (k === 'shard') lift = Math.max(lift, 0); }
     const o = new THREE.Object3D(); o.position.set(x, lift, z); o.rotation.set(0, ry, 0); o.scale.set(sx, sy, sx); o.updateMatrix();
     const lst = buckets.get(k) ?? []; buckets.set(k, lst);
     lst.push({ m: o.matrix.clone(), c: new THREE.Color(col).offsetHSL(0, rng.range(-0.05, 0.05), rng.range(-0.05, 0.06)) });
