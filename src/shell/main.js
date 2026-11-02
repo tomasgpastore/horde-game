@@ -117,8 +117,9 @@ addEventListener('game:over', async (e) => { setState('over'); const d = e.detai
   const win = !!d.victory, kills = d.kills ?? d.score ?? 0, time = Math.round(d.time ?? 0), level = d.level ?? 1;
   card.className = 'results ' + (win ? 'victory' : 'defeat'); q('#rtitle').textContent = win ? 'VICTORY' : 'YOU FELL'; q('#rsub').textContent = win ? 'The night is yours.' : 'The swarm claims another lantern.';
   q('#rk').textContent = kills; q('#rt').textContent = `${Math.floor(time / 60)}:${String(time % 60).padStart(2, '0')}`; q('#rl').textContent = level;
-  [['kills', kills, 0], ['time', time, 1], ['level', level, 2]].forEach(([k, v, i]) => { // best badge only when beating a previous record
-    const key = 'eh-best-' + k, prev = +(localStorage.getItem(key) || 0); card.querySelectorAll('.best')[i].hidden = !(prev > 0 && v > prev); if (v > prev) localStorage.setItem(key, v); });
+  // NEW BEST comes from the game's meta store (detail.records.broken; single source of truth, never flagged on a first run on an arena)
+  const broken = d.records?.broken ?? [], prevB = d.records?.prev;
+  ['kills', 'time', 'level'].forEach((k, i) => { const el = card.querySelectorAll('.best')[i]; el.hidden = !broken.includes(k); el.title = prevB ? `Previous best: ${k === 'time' ? Math.floor(prevB[k] / 60) + ':' + String(Math.round(prevB[k]) % 60).padStart(2, '0') : prevB[k]}` : ''; });
   const gear = q('#rgear'); gear.innerHTML = '';
   try { const { iconSvg } = await import('../game/art/icons.ts');
     for (const w of d.weapons || []) { const el = document.createElement('div'); el.className = 'rw'; el.innerHTML = `${iconSvg('w:' + w.id)}<span>Lv ${w.level}</span>`; gear.appendChild(el); } } catch (err) { console.warn('icons', err); }
