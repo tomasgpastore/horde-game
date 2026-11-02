@@ -13,6 +13,7 @@ function passives(st: Record<string, number>, maxHp: number): [string, number][]
     ['armor', Math.round((st.armor ?? 0) / 2)], ['luck', Math.round((st.luck ?? 0) / 0.05)], ['hp', Math.round((maxHp - 100) / 25)]] as [string, number][]).filter(x => x[1] > 0);
 }
 /** HUD + level-up cards. DOM overlay inside the game's own ui div. Gameplay/UI owner extends (lantern style, Rajdhani). */
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1'; // fps counter only with ?debug=1
 export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   const css = document.createElement('style');
   css.textContent = `.hud-top{position:absolute;left:0;right:0;top:0;padding:10px 14px;font:600 15px Rajdhani,system-ui,sans-serif;text-shadow:0 1px 3px #000;display:flex;gap:16px;align-items:center}
@@ -55,7 +56,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   return { update(s: SimState, fps: number) {
     const p = s.players[0];
     hp.style.width = Math.max(0, p.hp / p.maxHp * 100) + '%'; xpi.style.width = Math.min(100, p.xp / p.xpToNext * 100) + '%';
-    lv.textContent = `LV ${p.level}`; info.textContent = `${Math.floor(s.time / 60)}:${String(Math.floor(s.time % 60)).padStart(2, '0')}   ☠ ${s.kills}   ${fps.toFixed(0)}fps`;
+    lv.textContent = `LV ${p.level}`; info.textContent = `${Math.floor(s.time / 60)}:${String(Math.floor(s.time % 60)).padStart(2, '0')}   ☠ ${s.kills}   ${DEBUG ? "   " + fps.toFixed(0) + "fps" : ""}`;
     if (s.boss) { boss.style.display = 'block'; bn.textContent = BOSSES[s.boss.id]?.name ?? 'Boss'; const pct = Math.max(0, s.enemies.hp[s.boss.idx] / s.boss.maxHp * 100);
       lag = pct >= lag ? pct : Math.max(pct, lag - 0.35); bf.style.width = pct + '%'; bl.style.width = lag + '%'; } else { boss.style.display = 'none'; lag = 100; }
     const ps = passives(p.stats, p.maxHp), gk = p.weapons.map(w => w.id + w.level).join() + '|' + ps.join();
