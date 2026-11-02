@@ -72,7 +72,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
       if (!key) cards.style.display = 'none';
       else { cards.style.display = 'flex'; cards.innerHTML = '<h2>LEVEL UP</h2>'; s.levelChoices.forEach((id, i) => {
         const u = upgradeDef(id), w = p.weapons.find(w => 'w:' + w.id === id), c = document.createElement('div'); c.className = id.startsWith('w:') ? 'card w' : 'card';
-        const isW = id.startsWith('w:'), tag = w ? 'LV ' + w.level + ' → ' + (w.level + 1) : isW ? 'NEW WEAPON' : 'PASSIVE', pips = isW ? '<div class="pips">' + [1, 2, 3, 4, 5].map(n => '<i class="' + (n <= (w ? w.level + 1 : 1) ? 'on' : '') + '"></i>').join('') + '</div>' : '';
+        const isW = id.startsWith('w:'), tag = w ? 'LV ' + w.level + ' → ' + (w.level + 1) : isW ? 'NEW WEAPON' : id.startsWith('e:') ? 'EVOLUTION' : 'PASSIVE', pips = isW ? '<div class="pips">' + [1, 2, 3, 4, 5].map(n => '<i class="' + (n <= (w ? w.level + 1 : 1) ? 'on' : '') + '"></i>').join('') + '</div>' : '';
         c.innerHTML = `<div class="tag">${tag}</div><div style="filter:drop-shadow(0 0 10px #0008);margin-bottom:6px">${iconSvg(id)}</div>${pips}<h3>${u.name}</h3><p>${u.desc}</p><br><small><span class="kb">Press ${i + 1}</span><span class="tp">Tap</span></small>`;
         c.onclick = () => pick(i); cards.appendChild(c); }); }
     }

@@ -16,7 +16,24 @@ test('biome chain: 3 bosses, 3 arenas, victory only after The Unlit', async ({ p
     if (k < 2) { await page.evaluate(() => { (window as any).__game.paused = false; (window as any).__game.running = false; }); await page.waitForTimeout(1200); await page.screenshot({ path: `/tmp/biome_${k}.png` }); await page.evaluate(() => { (window as any).__game.paused = true; (window as any).__game.running = true; }); }
   }
   expect(log.map(l => l.bossId)).toEqual(['hollow_stag', 'bell_warden', 'the_unlit']);
-  expect(log[0].card).toMatch(/drowned cathedral/i); expect(log[1].card).toMatch(/void garden/i); // real-browser DOM: 'Entering …' title card is shown on each swap
+  expect(log[0].card).toMatch(/drowned cathedral/i); expect(log[1].card).toMatch(/void garden/i);
+  expect(log[0].card).toMatch(/biome 2 of 3/i); expect(log[1].card).toMatch(/biome 3 of 3/i); // number = arena's index in [ashen_woods, drowned_cathedral, void_garden] // real-browser DOM: 'Entering …' title card is shown on each swap
   expect(log[0].after.arena).toBe('drowned_cathedral'); expect(log[0].after.rendered).toBe('drowned_cathedral');
   expect(log[1].after.arena).toBe('void_garden'); expect(log[2].after.phase).toBe('gameOver'); expect(errors).toEqual([]);
+});
+
+// Reward card between biomes: boss dies -> level-up card screen shown (not auto-picked) -> screenshot for docs/art.
+test('boss reward card is shown between biomes (screenshot)', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/?seed=9&bloom=0&nodegrade=1'); await page.click('button[data-a=play]'); await page.waitForTimeout(500);
+  await page.evaluate(() => { const g = (window as any).__game, s = g.sim.state, p = s.players[0]; g.paused = true; p.iframes = 1e9; s.time = 299.99; const inp = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 1, dash: false, ability: false };
+    for (let i = 0; i < 5 && !s.boss; i++) { g.sim.step([inp]); g.onSimEvents(s.events); }
+    for (let k = 0; k < 4; k++) { p.weapons[0].level = 8; }                       // a maxed weapon + Might so the evolution card can appear
+    p.stats.damageMult = 1.15; s.enemies.alive[s.boss.idx] = 0; for (let i = 0; i < 5 && s.phase === 'running'; i++) { g.sim.step([inp]); g.onSimEvents(s.events); }
+    g.paused = false; g.running = false; });                                       // render frames, keep the card on screen (no auto-pick)
+  await page.waitForFunction(() => document.querySelectorAll('.card').length === 3, null, { timeout: 30000 }); await page.waitForTimeout(1200);
+  const info = await page.evaluate(() => ({ phase: (window as any).__game.sim.state.phase, choices: (window as any).__game.sim.state.levelChoices, hp: (window as any).__game.sim.state.players[0].hp }));
+  console.log('REWARD ' + JSON.stringify(info));
+  await page.screenshot({ path: '/tmp/boss-reward-card.png' });
+  expect(info.phase).toBe('levelUp'); expect(info.choices[0]).toBe('e:ember_bolt'); // evolution offered first (max level + Might)
 });
