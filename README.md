@@ -6,6 +6,8 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 
 ▶ **Play: https://emberhorde.fly.dev**
 
+![EMBERHORDE gameplay](docs/hero.gif)
+
 ## Controls
 WASD / arrows to move · mouse to aim · Space to dash · E for your ability · Esc to pause · gamepad supported (left stick move, right stick aim, A dash, X ability) · touch: drag the left stick, weapons fire automatically.
 
