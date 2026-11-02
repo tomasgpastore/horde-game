@@ -29,7 +29,7 @@ EMBERHORDE is a fast, 3D low-poly roguelite where you survive wave after wave of
 - **Escalating chaos** – dozens become hundreds on screen; bosses test your build.
 - **Short, replayable runs** – one more try, always.
 - **Low-poly style** – readable, colourful, smooth.
-- [https://emberhorde.fly.dev: confirm actual features — heroes, weapons, biomes, meta-progression, controls, mobile]
+- [FILL: confirm actual features — heroes, weapons, biomes, meta-progression, controls, mobile]
 
 ## Controls (confirm with Gameplay Engineer)
 WASD / arrows to move · mouse/auto-aim [confirm] · Esc pause · touch joystick on mobile [confirm]
