@@ -10,7 +10,7 @@ export const pickupSystem: System = { name: 'pickups', update(s, c) {
     if (d < 0.7) { pk.alive[i] = 0; if (pk.kind[i] === 1) { p.xp += p.xpToNext - p.xp; p.hp = Math.min(p.maxHp, p.hp + 25); } else p.xp += pk.value[i]; s.events.push({ t: 'pickup', kind: pk.kind[i], id: p.id }); }
   }
   if (p.xp >= p.xpToNext && s.phase === 'running') {
-    p.xp -= p.xpToNext; p.level++; p.xpToNext = Math.round(5 + p.level * 4 + p.level * p.level * 0.4);
+    p.xp -= p.xpToNext; p.level++; p.xpToNext = Math.round(5 + p.level * 5 + p.level * p.level * 0.5);
     s.levelChoices = rollChoices(p, c.rng); s.phase = 'levelUp';
     s.events.push({ t: 'levelUp', id: p.id, choices: s.levelChoices.slice() }, { t: 'slow', scale: 0.3, secs: 0.4 });
   }
