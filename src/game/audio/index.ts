@@ -54,7 +54,7 @@ export class Audio {
         case 'freeze': audio.dip(-4, e.ms / 1000 + 0.05); break; // hit-stop (player hurt / boss death): brief global dip, NOT the ice sfx
         case 'slow': break; // level-up slow-mo: the card-screen low-pass (state.phase) already covers it
         case 'bossTelegraph': sfx.play('boss_telegraph', { volume: 0.8 }); break;
-        case 'bossSlam': sfx.play('boss_roar', { volume: 0.9, pitch: 0.7 }); break;
+        case 'bossSlam': sfx.play('boss_slam'); break;
         case 'dash': sfx.play('dash'); break;
         case 'waveStart': sfx.play('boss_roar', { volume: 0.25, pitch: 1.5 }); break;
         case 'bossSpawn': sfx.play('boss_telegraph'); music.duck(-6, 0.6); sfx.play('boss_roar'); this.setBossFight(true); break;
