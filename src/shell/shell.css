@@ -32,3 +32,25 @@ body.touch.playing #stick{display:block}
 body.playing #pausebtn{display:block}
 #dashbtn{position:absolute;right:24px;bottom:40px;width:90px;height:90px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,122,60,.35);color:#fff;font:700 14px system-ui;pointer-events:auto;display:none;touch-action:none}
 body.touch.playing #dashbtn{display:block}
+
+/* ---- title scene ---- */
+body,button.btn,h1,h2{font-family:Rajdhani,"Trebuchet MS",system-ui,sans-serif}
+button.btn{font-weight:700;font-size:22px}
+#title{position:fixed;inset:0;width:100%;height:100%;z-index:1;display:none}
+#vignette{position:fixed;inset:0;z-index:2;pointer-events:none;display:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(5,6,14,.75) 100%)}
+#shell{z-index:3}
+#whiteout{position:fixed;inset:0;z-index:9;background:#fff;opacity:0;pointer-events:none;transition:opacity .5s ease-in}
+#whiteout.on{opacity:1;transition:opacity .55s ease-in;pointer-events:auto}
+body.scene-on .screen.menu{background:none}
+.screen.menu h1{animation:float 3s ease-in-out infinite,glow 3.2s ease-in-out infinite}
+@keyframes glow{50%{filter:drop-shadow(0 6px 0 #3a1408) drop-shadow(0 0 26px rgba(255,140,60,.75))}}
+.screen.menu.enter .tag,.screen.menu.enter .btn,.screen.menu.enter .hints{animation:rise .5s cubic-bezier(.2,.8,.2,1) backwards}
+.screen.menu.enter .tag{animation-delay:.1s}
+.screen.menu.enter .btn:nth-of-type(1){animation-delay:.2s}.screen.menu.enter .btn:nth-of-type(2){animation-delay:.28s}
+.screen.menu.enter .btn:nth-of-type(3){animation-delay:.36s}.screen.menu.enter .btn:nth-of-type(4){animation-delay:.44s}
+.screen.menu.enter .hints{animation-delay:.6s}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}}
+button.btn:hover,button.btn:focus-visible{transform:translateY(-3px) scale(1.04);box-shadow:0 8px 24px rgba(255,106,43,.25)}
+/* fallback: low-end / WebGL-fail / reduced motion */
+body:not(.scene-on) .screen.menu{background:radial-gradient(ellipse at 50% 35%,rgba(255,122,60,.2),transparent 55%),radial-gradient(ellipse at 50% 100%,#1b1f3a,#0d0f1a 70%)}
+@media (prefers-reduced-motion:reduce){.screen.menu h1,.screen.menu.enter *{animation:none!important}}

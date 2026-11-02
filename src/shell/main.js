@@ -1,4 +1,6 @@
 import './shell.css';
+import '@fontsource/rajdhani/latin-600.css';
+import '@fontsource/rajdhani/latin-700.css';
 const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
 const root = document.getElementById('shell');
 const DEF = { volume: 0.8, music: 0.7, sfx: 0.9, quality: 'med', shake: true };
@@ -11,11 +13,20 @@ window.__input = input;
 const webgl = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
 
 const mk = (cls, html) => { const e = $(`<div class="screen ${cls}">${html}</div>`); root.appendChild(e); return e; };
-const show = (...s) => { for (const e of Object.values(screens)) e.classList.add('hidden'); s.forEach(e => screens[e].classList.remove('hidden')); };
+const show = (...s) => { for (const e of Object.values(screens)) e.classList.add('hidden'); s.forEach(e => screens[e].classList.remove('hidden'));
+  if (s.includes('menu')) { screens.menu.classList.remove('enter'); void screens.menu.offsetWidth; screens.menu.classList.add('enter'); title?.show(); musicTitle(); } };
+let title = null, ui = null, titleOn = false;
+const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const musicTitle = () => { try { ui?.title(); } catch {} };
+async function initTitle() { // live 3D backdrop: lazy chunk, skipped for low quality / reduced motion
+  try { ui = new (await import('../game/audio/index.ts')).Audio(); } catch (e) { console.warn('title audio', e); }
+  if (reduced || settings.quality === 'low') return;
+  try { title = await (await import('./title.js')).createTitle({ onFallback: () => { title = null; document.body.classList.remove('scene-on'); } }); document.body.classList.add('scene-on'); } catch (e) { console.warn('title scene disabled', e); title = null; }
+}
 
 const screens = {
   loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div><div class="hints" id="tip"></div>`),
-  menu: mk('hidden', `<h1>EMBERHORDE</h1><p class="tag">Survive the swarm. Build the impossible.</p>
+  menu: mk('hidden menu', `<h1>EMBERHORDE</h1><p class="tag">Survive the swarm. Build the impossible.</p>
     <button class="btn primary" data-a="play">Play</button><button class="btn" data-a="coop">Co-op</button>
     <button class="btn" data-a="settings">Settings</button><button class="btn" data-a="credits">Credits</button>
     <div class="hints" id="hints"></div>`),
@@ -70,15 +81,18 @@ const setState = (s) => { state = s; document.body.classList.toggle('playing', s
 function toggle() { if (state === 'playing') { game.pause(); setState('paused'); show('pause'); } else if (state === 'paused') resume(); }
 function resume() { game.resume(); setState('playing'); show(); }
 
-root.addEventListener('click', (e) => {
+let lastHover = null;
+root.addEventListener('pointerover', e => { const b = e.target.closest?.('.btn'); if (b && b !== lastHover) ui?.ui('hover'); lastHover = b || null; });
+root.addEventListener('click', async (e) => {
   const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-  if (a === 'play' || a === 'coop') { mode = a === 'coop' ? 'coop' : 'solo'; show(); game.quit(); game.start({ mode }); setState('playing'); }
+  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play' || a === 'coop') musicTitle();
+  if (a === 'play' || a === 'coop') { mode = a === 'coop' ? 'coop' : 'solo'; if (title) { for (const b of root.querySelectorAll('.btn')) b.disabled = true; await title.transitionOut(); for (const b of root.querySelectorAll('.btn')) b.disabled = false; } show(); game.quit(); game.start({ mode }); setState('playing'); title?.reveal(); }
   else if (a === 'settings') { show('settings'); screens.settings.dataset.from = 'menu'; }
   else if (a === 'psettings') { show('settings'); screens.settings.dataset.from = 'pause'; }
   else if (a === 'credits') show('credits');
   else if (a === 'back') show(screens.settings.dataset.from === 'pause' && !screens.settings.classList.contains('hidden') && state === 'paused' ? 'pause' : 'menu');
   else if (a === 'resume') resume();
-  else if (a === 'quit') { game.quit(); setState('menu'); show('menu'); }
+  else if (a === 'quit') { game.quit(); setState('menu'); show('menu'); }  // show('menu') restarts the title scene
 });
 pauseBtn.addEventListener('click', toggle);
 addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p') toggle(); });
@@ -92,10 +106,12 @@ screens.loading.querySelector('#tip').textContent=TIPS[Math.random()*TIPS.length
   if (!webgl) return show('nogl');
   const bar = screens.loading.querySelector('.bar i'), txt = screens.loading.querySelector('#ltxt');
   try {
+    const titleReady = initTitle(); // loads in parallel with the game chunk
     const { default: createGame } = await import('../game/index.js');
     txt.textContent = 'Loading assets…';
     game = await createGame({ canvasParent: document.getElementById('game'), settings, input,
       onProgress: p => { bar.style.width = (p * 100).toFixed(0) + '%'; txt.textContent = `Loading… ${(p * 100) | 0}%`; } });
+    await Promise.race([titleReady, new Promise(r => setTimeout(r, 4000))]);
     bar.style.width = '100%'; setState('menu'); show('menu');
   } catch (err) { console.error(err); txt.textContent = 'Failed to load. Please refresh.'; }
 })();
