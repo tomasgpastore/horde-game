@@ -5,7 +5,7 @@ import type { Vfx } from './vfx';
 /** Instanced drawing of projectiles (bolts+trails, orbit blades, chain sparks, nova rings, lava discs) and XP gems.
  *  Projectile kinds: 0 bolt, 1 orbit blade, 2 nova ring, 3 chain spark, 4 lava patch, 5 seeker spear. Add new kinds HERE, not in renderer.ts. */
 export class ProjectileRenderer {
-  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh; chestMesh!: THREE.InstancedMesh; beamMesh!: THREE.InstancedMesh;
+  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; bladeMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh; chestMesh!: THREE.InstancedMesh; beamMesh!: THREE.InstancedMesh;
   private m = new THREE.Object3D(); private flashColor = new THREE.Color(0xffffff);
   constructor(scene: THREE.Scene, private vfx: Vfx) {
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
@@ -21,6 +21,7 @@ export class ProjectileRenderer {
     this.lavaMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }), MAX_PROJECTILES);
     this.lavaMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.lavaMesh.frustumCulled = false; this.lavaMesh.count = 0; scene.add(this.lavaMesh);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4de8ff).multiplyScalar(2.6) }), MAX_PICKUPS);
+    { const bg = new THREE.OctahedronGeometry(0.5, 0); bg.scale(0.5, 0.12, 1.5); this.bladeMesh = new THREE.InstancedMesh(bg, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbff6ff).multiplyScalar(3), toneMapped: false }), 64); this.bladeMesh.frustumCulled = false; this.bladeMesh.count = 0; scene.add(this.bladeMesh); }
     this.chestMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb020).multiplyScalar(1.3) }), 64); this.chestMesh.count = 0;
     { // gold light beam above each chest: tall additive column whose vertex colour fades to black at the top (reads from across the arena)
       const bg = new THREE.BufferGeometry(); const w = 0.4, h = 4.5; bg.setAttribute('position', new THREE.Float32BufferAttribute([-w, 0, 0, w, 0, 0, w * 0.4, h, 0, -w, 0, 0, w * 0.4, h, 0, -w * 0.4, h, 0, 0, 0, -w, 0, 0, w, 0, h, w * 0.4, 0, 0, -w, 0, h, w * 0.4, 0, h, -w * 0.4], 3));
@@ -30,20 +31,21 @@ export class ProjectileRenderer {
   }
   update(s: SimState, trailTick: number) {
     let n = 0;
-    n = 0; let rn = 0, tn = 0, ln = 0; const pr = s.projectiles; this.vfx.zapBegin(); let lx = 0, lz = 0, ll = -1;
+    n = 0; let rn = 0, tn = 0, ln = 0, bn = 0; const pr = s.projectiles; this.vfx.zapBegin(); let lx = 0, lz = 0, ll = -1;
     for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
       const k = pr.kind[i];
-      if (k === 3) { if (ll >= 0 && Math.abs(pr.life[i] - ll) < 0.03 && Math.hypot(pr.x[i] - lx, pr.z[i] - lz) < 9) this.vfx.zap(lx, lz, pr.x[i], pr.z[i]); lx = pr.x[i]; lz = pr.z[i]; ll = pr.life[i]; }
-      else if (k === 1 && (trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
+      if (k === 3) { if (pr.life[i] > 0.1) this.vfx.ring(pr.x[i], pr.z[i], 0xcfefff, 1.1, 0.14, 0.9); if (ll >= 0 && Math.abs(pr.life[i] - ll) < 0.03 && Math.hypot(pr.x[i] - lx, pr.z[i] - lz) < 9) this.vfx.zap(lx, lz, pr.x[i], pr.z[i]); lx = pr.x[i]; lz = pr.z[i]; ll = pr.life[i]; }
+      else if (k === 1) { if ((trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
+        const pp = s.players[0]; this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, Math.atan2(pr.x[i] - pp.x, pr.z[i] - pp.z) + Math.PI / 2, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.bladeMesh.setMatrixAt(bn++, this.m.matrix); continue; }
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       if (k === 4) { const f = Math.min(1, pr.life[i] / 0.6), r = pr.vx[i] * (0.75 + 0.25 * f) * (1 + 0.06 * Math.sin(s.time * 9 + i)); this.m.position.set(pr.x[i], 0.05, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.lavaMesh.setMatrixAt(ln, this.m.matrix);
         this.flashColor.setHex(0xff4a14).multiplyScalar(1.2 + 1.4 * f); this.lavaMesh.setColorAt(ln++, this.flashColor); continue; }
       if (k === 0) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]);
         this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
         this.flashColor.setHex(0xffd35a).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
-      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
+      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 0.9 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : k === 5 ? 0xd9a8ff : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
-    this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
+    this.bladeMesh.count = bn; this.bladeMesh.instanceMatrix.needsUpdate = true; this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
     this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
     this.lavaMesh.count = ln; this.lavaMesh.instanceMatrix.needsUpdate = true; if (this.lavaMesh.instanceColor) this.lavaMesh.instanceColor.needsUpdate = true;
