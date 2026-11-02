@@ -95,12 +95,12 @@ export class EnemyRenderer {
       if (!e.alive[i]) continue;
       const k = e.kind[i] < LOOKS.length ? e.kind[i] : 0, l = LOOKS[k], n = this.counts[k]++;
       const ph = t * (l.float ? 3 : 9) + i * 1.7, bob = Math.abs(Math.sin(ph)) * (l.bob ?? 0);
-      const sc = l.scale ?? 1, c = Math.cos(e.facing[i]) * sc, sn = Math.sin(e.facing[i]) * sc, o = n * 16;
+      const el = e.flags[i] & 1, sc = (l.scale ?? 1) * (el ? 1.6 : 1), c = Math.cos(e.facing[i]) * sc, sn = Math.sin(e.facing[i]) * sc, o = n * 16;
       const ba = this.body[k].instanceMatrix.array as Float32Array, ga = this.glow[k].instanceMatrix.array as Float32Array;
       ba[o] = c; ba[o + 1] = 0; ba[o + 2] = -sn; ba[o + 3] = 0; ba[o + 4] = 0; ba[o + 5] = sc; ba[o + 6] = 0; ba[o + 7] = 0; ba[o + 8] = sn; ba[o + 9] = 0; ba[o + 10] = c; ba[o + 11] = 0;
       ba[o + 12] = e.x[i] + e.vx[i] * ex; ba[o + 13] = (l.float ?? 0) + (l.float ? Math.sin(ph) * (l.bob ?? 0) : bob); ba[o + 14] = e.z[i] + e.vz[i] * ex; ba[o + 15] = 1;
       ga.set(ba.subarray(o, o + 16), o);
-      const f = e.hitFlash[i] > 0 && e.hitFlash[i] <= 0.15 ? 1.8 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = ca[n * 3 + 1] = ca[n * 3 + 2] = f;
+      const f = e.hitFlash[i] > 0 && e.hitFlash[i] <= 0.15 ? 1.8 : 1, ca = this.body[k].instanceColor!.array as Float32Array; ca[n * 3] = f * (el ? 3 : 1); ca[n * 3 + 1] = f * (el ? 2.2 : 1); ca[n * 3 + 2] = f * (el ? 0.6 : 1); // elites: gold-hot body
     }
     for (let k = 0; k < LOOKS.length; k++) {
       const n = this.counts[k]; for (const x of [this.body[k], this.glow[k]]) { x.count = n; x.instanceMatrix.needsUpdate = true; }

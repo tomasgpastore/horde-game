@@ -22,6 +22,7 @@ export interface EnemyPool {
   alive: Uint8Array;
   kind: Uint8Array;         // index into content ENEMIES table
   x: Float32Array; z: Float32Array; vx: Float32Array; vz: Float32Array;
+  flags: Uint8Array;        // bit0 = elite
   hp: Float32Array; hitFlash: Float32Array; // seconds remaining of hit flash
   facing: Float32Array;     // yaw radians
 }
@@ -39,7 +40,7 @@ export interface PlayerState {
   x: number; z: number; vx: number; vz: number; facing: number;
   hp: number; maxHp: number; level: number; xp: number; xpToNext: number;
   dashTime: number; dashCooldown: number; iframes: number;
-  weapons: { id: string; level: number; cooldown: number }[];
+  weapons: { id: string; level: number; cooldown: number; evolved?: boolean }[];
   stats: Record<string, number>; // moveSpeed, damageMult, area, pickupRadius...
   dead: boolean;
 }
@@ -68,7 +69,7 @@ export interface SimState {
   enemies: EnemyPool; projectiles: ProjectilePool; pickups: PickupPool;
   events: SimEvent[];
   phase: 'running' | 'levelUp' | 'gameOver';
-  wave: number; kills: number; gold: number;
+  wave: number; kills: number; gold: number; eliteCount: number;
   /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
   levelChoices: string[];
   /** World-owned spawner state (plain numbers => snapshot/rollback safe). */
