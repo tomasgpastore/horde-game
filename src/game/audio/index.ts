@@ -17,7 +17,7 @@ export function fireSound(weapon: string): SfxName { return FIRE_SOUND[weapon] ?
  * Game-facing audio. Call `consume(events, state)` once per sim tick.
  * Handles unlock, adaptive intensity (smoothed kill rate), boss theme + telegraph ducking,
  * level-up card-screen filtering, low-HP heartbeat, and kill/hit batching (never silently dropped).
- * Extra event types Gameplay may emit (optional): {t:'freeze'|'slow'}, {t:'evolve'}.
+ * freeze = hit-stop (global -4dB dip for ms), slow = ignored (card low-pass covers it), evolve = big sting + duck.
  */
 export class Audio {
   private rate = 0;       // smoothed kills/sec
@@ -50,17 +50,14 @@ export class Audio {
         case 'playerHurt': sfx.play('hurt'); break;
         case 'pickup': sfx.play('gem'); break;
         case 'levelUp': sfx.play('levelup'); if (!state) this.setCards(true); break;
-        case 'evolve': sfx.play('levelup', { volume: 1, pitch: 1.5 }); break;
+        case 'evolve': this.evolve(); break;
+        case 'freeze': audio.dip(-4, e.ms / 1000 + 0.05); break; // hit-stop (player hurt / boss death): brief global dip, NOT the ice sfx
+        case 'slow': break; // level-up slow-mo: the card-screen low-pass (state.phase) already covers it
         case 'dash': sfx.play('dash'); break;
         case 'waveStart': sfx.play('boss_roar', { volume: 0.25, pitch: 1.5 }); break;
         case 'bossSpawn': sfx.play('boss_telegraph'); music.duck(-6, 0.6); sfx.play('boss_roar'); this.setBossFight(true); break;
         case 'bossDeath': this.setBossFight(false); sfx.play('levelup', { volume: 0.9, pitch: 0.9 }); sfx.play('boss_slam', { volume: 0.6, pitch: 0.7 }); break;
         case 'gameOver': sfx.play('death'); this.setBossFight(false); music.setIntensity(0.05); break;
-        default: {
-          const t = (e as { t: string }).t;
-          if (t === 'freeze' || t === 'slow') sfx.play('freeze');
-          else if (t === 'evolve') this.evolve();
-        }
       }
     }
     this.killAcc += kills;

@@ -50,7 +50,7 @@ const DUCK: Partial<Record<SfxName, [number, number]>> = {
 class AudioEngine {
   ctx: AudioContext | null = null;
   offline = false;
-  swarmBus!: GainNode;
+  swarmBus!: GainNode; dipG!: GainNode;
   musicDuck!: GainNode; musicLpf!: BiquadFilterNode;
   master!: GainNode; musicBus!: GainNode; sfxBus!: GainNode; comp!: DynamicsCompressorNode;
   noiseBuf!: AudioBuffer;
@@ -78,7 +78,7 @@ class AudioEngine {
     this.musicDuck = ctx.createGain(); this.musicLpf = ctx.createBiquadFilter(); this.musicLpf.type = 'lowpass'; this.musicLpf.frequency.value = 20000; this.musicLpf.Q.value = 0.5;
     this.swarmBus = ctx.createGain(); this.swarmBus.gain.value = SWARM_BASE; this.swarmBus.connect(this.sfxBus);
     this.musicBus.connect(this.musicDuck); this.musicDuck.connect(this.musicLpf); this.musicLpf.connect(this.comp); this.sfxBus.connect(this.comp);
-    this.comp.connect(this.master); this.master.connect(limiter); limiter.connect(ctx.destination);
+    this.dipG = ctx.createGain(); this.comp.connect(this.dipG); this.dipG.connect(this.master); this.master.connect(limiter); limiter.connect(ctx.destination);
     this.applyVolumes();
     const len = ctx.sampleRate * 2; this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -103,6 +103,8 @@ class AudioEngine {
     this.sfxBus.gain.setTargetAtTime(this.vol.sfx, t, 0.03);
   }
   queueMusic(name: MusicName | null) { this.pendingMusic = { name }; }
+  /** Brief global dip (hit-stop feel): -db for secs. */
+  dip(db = -4, secs = 0.1) { if (!this.ctx) return; const g = this.dipG.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(Math.pow(10, db / 20), t, 0.008); g.setTargetAtTime(1, t + secs, 0.05); }
   /** Pause when tab hidden, e.g. wired to visibilitychange. */
   suspend() { void this.ctx?.suspend(); }
   resume() { void this.ctx?.resume(); }
