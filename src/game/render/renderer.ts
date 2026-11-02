@@ -70,7 +70,7 @@ export class Renderer {
   consumeEvents(ev: SimEvent[]) { // visual-only randomness is fine here (never feeds the sim)
     for (const e of ev) {
       if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
-      else if (e.t === 'shoot') { if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
+      else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
       else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
       else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); }
@@ -98,15 +98,18 @@ export class Renderer {
     const b = s.boss; this.tele.visible = !!b && b.mode === 1;
     if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(s.time * 18)); }
     this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0;
-    n = 0; let rn = 0, tn = 0; const pr = s.projectiles; for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
+    n = 0; let rn = 0, tn = 0; const pr = s.projectiles; this.vfx.zapBegin(); let lx = 0, lz = 0, ll = -1;
+    for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
       const k = pr.kind[i];
+      if (k === 3) { if (ll >= 0 && Math.abs(pr.life[i] - ll) < 0.03 && Math.hypot(pr.x[i] - lx, pr.z[i] - lz) < 9) this.vfx.zap(lx, lz, pr.x[i], pr.z[i]); lx = pr.x[i]; lz = pr.z[i]; ll = pr.life[i]; }
+      else if (k === 1 && (this.trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       if (k === 0) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]);
         this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
         this.flashColor.setHex(0xffd35a).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
       this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
-    this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
+    this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
     this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
     n = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
