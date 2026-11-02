@@ -1,12 +1,29 @@
 name: CI
-on: [pull_request]
+on:
+  push: { branches: [main] }
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
       - run: npm run build
       - run: docker build -t horde-game .
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+        env: { CI: '1' }
+      - name: Summarize perf/playthrough
+        if: always()
+        run: |
+          echo '### Perf / playthrough' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat test-results/*/perf.json test-results/*/playthrough.json 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: playwright-artifacts, path: test-results, retention-days: 14 }
