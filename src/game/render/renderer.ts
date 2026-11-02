@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { SimState, SimEvent, ArenaDef, ArenaHandle } from '@shared/types';
+import { limits, MAX_ALIVE } from '@world/waves';
 import { buildBoundary } from './boundary';
 import { ProjectileRenderer } from './projectiles';
 import { BossView } from './bossview';
@@ -41,7 +42,7 @@ export class Renderer {
     if (sun) { this.sunOff.copy(sun.position); this.scene.add(sun.target); const sc = sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); sun.shadow.mapSize.set(2048, 2048); sun.shadow.normalBias = 0.04; }
     this.occ = new OccluderFader(this.scene, fresh); this.rig.snap();
   }
-  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
+  setQuality(q: 'low' | 'med' | 'high') { this.q = q; limits.maxAlive = q === 'low' ? 200 : MAX_ALIVE; /* auto-degrade also lowers the enemy cap (final cap = min(tuned cap, quality cap)) */ this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
     const pr = Math.min(devicePixelRatio, q === 'low' ? 1.25 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight);
     const sh = q !== 'low'; if (this.three.shadowMap.enabled !== sh) { this.three.shadowMap.enabled = sh; this.scene.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (m) [m].flat().forEach(x => x.needsUpdate = true); }); } }
   disposeBoundary: () => void = () => {}; arenaId = ''; occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();

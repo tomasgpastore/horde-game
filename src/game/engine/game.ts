@@ -87,6 +87,8 @@ export class Game {
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
   hitstop = 0;
+  /** QA hook: current quality-driven alive cap (min'd with the tuned time curve in waves.ts). */
+  get aliveLimit() { return limits.maxAlive; }
   /** QA/perf hook: window.__game.perf = per-stage CPU ms, draw calls, tris. ?debug=1 shows an overlay. */
   get perf() { return { fps: this.fps, ...this.renderer.perf }; }
   dbg: HTMLElement | null = null;
