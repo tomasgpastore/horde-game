@@ -12,11 +12,11 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 - 6 weapons: Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears
 - 6 weapon evolutions: at level 8, pair a weapon with its passive
 - Elites every 40s (from 0:50) that drop chests
-- A boss at 5:00 (the Hollow Stag)
+- 3 biomes, 3 bosses (Hollow Stag, Bell-Warden, The Unlit): beat a boss and the run continues into the next biome; victory after The Unlit (~15 min)
 - Solo only (no co-op)
 
 ## The three bosses
-Preview each arena and boss directly (these jump the clock for testing; a normal run starts in the first arena):
+Each run chains through all three biomes. To preview a specific arena and boss directly (these jump the clock for testing):
 
 | Boss | Arena | Link |
 |---|---|---|
