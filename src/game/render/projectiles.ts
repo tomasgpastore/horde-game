@@ -18,7 +18,7 @@ export class ProjectileRenderer {
     this.projMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3);
     this.ringMesh = new THREE.InstancedMesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }), 64);
     this.ringMesh.frustumCulled = false; scene.add(this.ringMesh);
-    this.lavaMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }), MAX_PROJECTILES);
+    this.lavaMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.38, depthWrite: false }), MAX_PROJECTILES); // 0.85 read as a solid orange blob at high level
     this.lavaMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.lavaMesh.frustumCulled = false; this.lavaMesh.count = 0; scene.add(this.lavaMesh);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4de8ff).multiplyScalar(2.6) }), MAX_PICKUPS);
     this.chestMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb020).multiplyScalar(1.3) }), 64); this.chestMesh.count = 0;
@@ -33,11 +33,14 @@ export class ProjectileRenderer {
       else if (k === 1 && (trailTick & 1) === 0) this.vfx.trail(pr.x[i], 0.8, pr.z[i], 0x6fe8ff);
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       if (k === 4) { const f = Math.min(1, pr.life[i] / 0.6), r = pr.vx[i] * (0.75 + 0.25 * f) * (1 + 0.06 * Math.sin(s.time * 9 + i)); this.m.position.set(pr.x[i], 0.05, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.lavaMesh.setMatrixAt(ln, this.m.matrix);
-        this.flashColor.setHex(0xff4a14).multiplyScalar(1.2 + 1.4 * f); this.lavaMesh.setColorAt(ln++, this.flashColor); continue; }
+        this.flashColor.setHex(0xff4a14).multiplyScalar(0.7 + 0.9 * f); this.lavaMesh.setColorAt(ln++, this.flashColor); continue; }
+      if (k === 5) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]); // seeker spear: violet streak behind the head
+        this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.set(1, 1, 0.7); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
+        this.flashColor.setHex(0xd9a8ff).multiplyScalar(2.0); this.trailMesh.setColorAt(tn++, this.flashColor); }
       if (k === 0) { const yaw = Math.atan2(pr.vx[i], pr.vz[i]);
         this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, yaw, 0); this.m.scale.setScalar(1); this.m.updateMatrix(); this.trailMesh.setMatrixAt(tn, this.m.matrix);
         this.flashColor.setHex(0xffd35a).multiplyScalar(2.2); this.trailMesh.setColorAt(tn++, this.flashColor); }
-      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
+      this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, k === 0 || k === 5 ? Math.atan2(pr.vx[i], pr.vz[i]) : s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : k === 5 ? 0xd9a8ff : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
     this.vfx.zapEnd(); this.m.scale.setScalar(1); this.ringMesh.count = rn; this.ringMesh.instanceMatrix.needsUpdate = true; if (this.projMesh.instanceColor) this.projMesh.instanceColor.needsUpdate = true;
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
