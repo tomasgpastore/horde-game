@@ -11,6 +11,7 @@ import { gridSystem } from './systems/grid';
 import { weaponSystem } from './systems/weapons';
 import { projectileSystem } from './systems/projectiles';
 import { pickupSystem } from './systems/pickups';
+import { MAX_WEAPON_LEVEL } from './content/weapons';
 import { applyUpgrade } from './content/upgrades';
 
 export function createState(seed: number, arena: ArenaDef, playerCount = 1): SimState {
@@ -38,6 +39,7 @@ export class Sim {
     const s = this.state; if (s.phase !== 'levelUp') return;
     const id = s.levelChoices[index]; if (!id) return;
     applyUpgrade(s.players[0], id);
+    const w = s.players[0].weapons.find(w => 'w:' + w.id === id); if (w && w.level === MAX_WEAPON_LEVEL) s.events.push({ t: 'evolve', id: 0, weapon: w.id });
     s.levelChoices = []; s.phase = 'running';
     // chain-level if enough xp is banked
     pickupSystem.update(s, { dt: 0, rng: this.rng, arena: this.arena, inputs: [] });
