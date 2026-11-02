@@ -127,8 +127,8 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   }
   // rim wall: tall jagged rocks just outside the playable edge
   const rimN = Math.round(R * 2.6);
-  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.4, 3) * (1 - 0.4 * Math.max(0, Math.sin(a)));
-    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : Math.min(s * rng.range(1.5, 3.2), 4.5))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.4, 3) * (1 - 0.4 * Math.max(0, Math.sin(a))) * (1 - 0.35 * Math.abs(Math.cos(a)) * Math.min(1, Math.max(0, 1 + 2 * Math.sin(a))));
+    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : Math.min(s * rng.range(1.5, 3.2), 3 + 14 * Math.min(1, Math.max(0, (-sn - 0.35) / 0.35))))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
   { const fl = buckets.get('brazier'); if (fl) buckets.set('flame', fl.map(l => ({ m: l.m, c: new THREE.Color(0xffb866) }))); } // dim bowl + small bright flame core per brazier
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
