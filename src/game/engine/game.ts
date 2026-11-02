@@ -51,7 +51,7 @@ export class Game {
     const s = this.sim.state, p = s.players[0], arena = getArena(next); this.sim.arena = arena; this.renderer.setArena(arena);
     const e = s.enemies, pr = s.projectiles, pk = s.pickups; e.alive.fill(0); pr.alive.fill(0); pk.alive.fill(0);
     p.x = 0; p.z = 0; p.vx = p.vz = 0; p.iframes = 2; s.spawner.boss = false; s.spawner.budget = 0; s.biomeT0 = s.time; s.biome++;
-    this.titleCard(arena.name, `Biome ${s.biome + 1} of 3`);
+    this.titleCard(arena.name, `Biome ${Math.max(1, ['ashen_woods', 'drowned_cathedral', 'void_garden'].indexOf(arena.id) + 1)} of 3`); // by arena order (also right when the run started via ?arena=)
   }
   titleCard(name: string, sub: string) {
     const d = document.createElement('div'); d.style.cssText = 'position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;font:700 54px Rajdhani,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#fff;text-shadow:0 0 24px #4de8ff,0 3px 6px #000;opacity:0;transition:opacity .6s';

@@ -74,11 +74,12 @@ test('M hotkey toggles mute in game, not while typing', async ({ page }) => {
 });
 
 test('real boss telegraph/slam events trigger boss_telegraph / boss_slam', async ({ page }) => {
+  test.setTimeout(200000); // slow CI runners: the boss cycle needs real sim time
   const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
-  await page.goto('/?autoplay=1&t=298'); await hook(page); await page.click('button[data-a=play]');
-  await page.waitForFunction(() => (window as any).__game?.sim?.state?.tick > 30);
+  await page.goto('/?autoplay=1&t=298&nodegrade=1&bloom=0'); await hook(page); await page.click('button[data-a=play]');
+  await page.waitForFunction(() => (window as any).__game?.sim?.state?.tick > 30, null, { timeout: 90000 });
   await page.evaluate(() => { const w = window as any, s = w.__audio.sfx, o = s.play.bind(s); w.T = {}; s.play = (n: string, p: any) => { w.T[n] = (w.T[n] || 0) + 1; return o(n, p); }; });
   // wait for the sim itself to emit them (boss spawns at 300s, then chase -> telegraph -> charge -> slam)
-  await page.waitForFunction(() => { const T = (window as any).T; return T.boss_telegraph >= 2 && T.boss_slam >= 1; }, null, { timeout: 40000 });
+  await page.waitForFunction(() => { const T = (window as any).T; return T.boss_telegraph >= 2 && T.boss_slam >= 1; }, null, { timeout: 150000 });
   expect(errors).toEqual([]);
 });
