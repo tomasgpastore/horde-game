@@ -36,8 +36,9 @@ function evolutions(p: PlayerState, boss = false): string[] {
   // boss chest: any weapon at level >= 4 may evolve (no passive needed); normal: max level + paired passive
   return p.weapons.filter(w => !w.evolved && EVOLUTIONS[w.id] && (boss ? w.level >= 4 : w.level >= MAX_WEAPON_LEVEL && EVOLUTIONS[w.id].has(p))).sort((a, b) => b.level - a.level).map(w => 'e:' + w.id);
 }
+export const MAX_PASSIVE_STACKS = 8;
 function available(p: PlayerState): UpgradeDef[] {
-  return UPGRADES.filter(u => !u.id.startsWith('w:') || (p.weapons.find(w => 'w:' + w.id === u.id)?.level ?? 0) < MAX_WEAPON_LEVEL);
+  return UPGRADES.filter(u => u.id.startsWith('w:') ? (p.weapons.find(w => 'w:' + w.id === u.id)?.level ?? 0) < MAX_WEAPON_LEVEL : (p.stats['n_' + u.id] ?? 0) < MAX_PASSIVE_STACKS); // passives cap at 8 stacks (no infinite snowball)
 }
 /** Pick `n` distinct choices deterministically. */
 export function rollChoices(p: PlayerState, rng: Rng, n = 3, boss = false): string[] {
@@ -49,7 +50,7 @@ export function rollChoices(p: PlayerState, rng: Rng, n = 3, boss = false): stri
 export function applyUpgrade(p: PlayerState, id: string) {
   if (id.startsWith('e:')) { const w = p.weapons.find(w => 'e:' + w.id === id); if (w) { w.evolved = true; w.level += EVOLVE_LEVELS; } return; }
   if (id.startsWith('w:')) { const w = p.weapons.find(w => 'w:' + w.id === id); if (w) w.level++; else p.weapons.push({ id: id.slice(2), level: 1, cooldown: 0 }); return; }
-  const st = p.stats;
+  const st = p.stats; st['n_' + id] = (st['n_' + id] ?? 0) + 1;
   switch (id) {
     case 'p:might': st.damageMult *= 1.15; break;
     case 'p:haste': st.cooldownMult *= 0.9; break;

@@ -3,9 +3,10 @@ import { alloc } from '../pools';
 import { MAX_ENEMIES } from '@shared/types';
 import type { SimState } from '@shared/types';
 import { enemyDef } from '../content/enemies';
+import { capAt } from '@world/waves';
 /** Swarm events every SWARM_EVERY s (from SWARM_START): alternating STAMPEDE LINE (a wall of skitters sweeping in from one side)
  *  and ENCIRCLE (ring of skitters closing in). 30–60 enemies at once, even past the soft alive cap (+80). Deterministic (ctx.rng). */
-export const SWARM_START = 40, SWARM_EVERY = 45, SKITTER = 3;
+export const SWARM_START = 45, SWARM_EVERY = 45, SKITTER = 3;
 function put(s: SimState, kind: number, x: number, z: number): boolean {
   const e = s.enemies, i = alloc(e.alive, e.count, MAX_ENEMIES); if (i < 0) return false;
   e.alive[i] = 1; e.kind[i] = kind; e.flags[i] = 0; e.x[i] = x; e.z[i] = z; e.vx[i] = e.vz[i] = 0; e.hitFlash[i] = 0; e.facing[i] = 0;
@@ -17,7 +18,7 @@ export const swarmSystem: System = { name: 'swarms', update(s, c) {
   const p = s.players[0]; if (p.dead) return; s.swarmCount = n;
   let alive = 0; const e = s.enemies; for (let i = 0; i < e.count; i++) alive += e.alive[i];
   if (alive > 520) return;
-  const count = Math.min(60, 30 + n * 6), R = c.arena.radius - 1.5, fit = (x: number, z: number): [number, number] => { const d = Math.hypot(x, z); return d > R ? [x * R / d, z * R / d] : [x, z]; };
+  const count = Math.max(0, Math.min(60, 14 + n * 6, capAt(s.time) + 25 - alive)) /* swarms respect the time curve (+25 slack): first swarm ~20, growing to 60 */, R = c.arena.radius - 1.5, fit = (x: number, z: number): [number, number] => { const d = Math.hypot(x, z); return d > R ? [x * R / d, z * R / d] : [x, z]; };
   const a0 = c.rng.range(0, Math.PI * 2);
   if (n % 2 === 1) { // stampede line: perpendicular wall 24u away
     const dx = Math.cos(a0), dz = Math.sin(a0), px = -dz, pz = dx;
