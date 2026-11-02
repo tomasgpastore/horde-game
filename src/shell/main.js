@@ -89,7 +89,7 @@ let lastHover = null;
 root.addEventListener('pointerover', e => { const b = e.target.closest?.('.btn'); if (b && b !== lastHover) ui?.ui('hover'); lastHover = b || null; });
 root.addEventListener('click', async (e) => {
   const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play') musicTitle();
+  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play') { musicTitle(); ui?.stinger(); }
   if (a === 'play') { mode = 'solo'; if (title) { for (const b of root.querySelectorAll('.btn')) b.disabled = true; await title.transitionOut(); for (const b of root.querySelectorAll('.btn')) b.disabled = false; } show(); game.quit(); game.start({ mode }); setState('playing'); title?.reveal(); }
   else if (a === 'settings') { show('settings'); screens.settings.dataset.from = 'menu'; }
   else if (a === 'psettings') { show('settings'); screens.settings.dataset.from = 'pause'; }
