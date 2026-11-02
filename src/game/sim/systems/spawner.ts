@@ -10,11 +10,12 @@ export const SPAWN_DIST = 24;
 
 export const spawnHp = (kind: number, wave: number) => enemyDef(kind).hp * (1 + wave * 0.12);
 
-function spawnOne(s: SimState, kind: number, x: number, z: number): boolean {
+export const ELITE = { minWave: 3, chance: 0.02, hpMult: 3 };
+function spawnOne(s: SimState, kind: number, x: number, z: number, elite = false): boolean {
   const e = s.enemies, i = alloc(e.alive, e.count, MAX_ENEMIES);
   if (i < 0) return false;
   e.alive[i] = 1; e.kind[i] = kind; e.x[i] = x; e.z[i] = z; e.vx[i] = 0; e.vz[i] = 0;
-  e.hp[i] = spawnHp(kind, s.wave); e.hitFlash[i] = 0; e.facing[i] = 0;
+  e.hp[i] = spawnHp(kind, s.wave) * (elite ? ELITE.hpMult : 1); e.hitFlash[i] = 0; e.facing[i] = 0; e.elite[i] = elite ? 1 : 0;
   if (i >= e.count) e.count = i + 1;
   return true;
 }
@@ -42,7 +43,7 @@ export const spawner: System = { name: 'spawner', update(s, c) {
   a.budget += def.rate * (0.8 + 0.4 * phase) * c.dt;
   while (a.budget >= 1) { a.budget -= 1; if (aliveCount >= def.cap) { a.budget = Math.min(a.budget, 2); break; }
     const p = s.players[c.rng.pick(act)], [x, z] = place(p, c.rng.range(0, Math.PI * 2), SPAWN_DIST + c.rng.range(0, 4));
-    if (spawnOne(s, sampleKind(), x, z)) aliveCount++; }
+    if (spawnOne(s, sampleKind(), x, z, wave >= ELITE.minWave && c.rng.next() < ELITE.chance)) aliveCount++; }
   // ring surge around a player: forces movement
   if (def.surge && s.time >= a.nextSurge) { a.nextSurge = s.time + def.surge.every;
     const p = s.players[c.rng.pick(act)], n = def.surge.count, k = sampleKind(), off = c.rng.range(0, Math.PI * 2);

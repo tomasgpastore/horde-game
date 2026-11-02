@@ -24,6 +24,7 @@ export interface EnemyPool {
   x: Float32Array; z: Float32Array; vx: Float32Array; vz: Float32Array;
   hp: Float32Array; hitFlash: Float32Array; // seconds remaining of hit flash
   facing: Float32Array;     // yaw radians
+  elite: Uint8Array;        // 1 = elite: 3x hp, drops a chest (render: crown/larger/glow)
 }
 export interface ProjectilePool {
   count: number; alive: Uint8Array; kind: Uint8Array; owner: Uint8Array;
@@ -53,6 +54,7 @@ export type SimEvent =
   | { t: 'pickup'; kind: number; id: number }
   | { t: 'levelUp'; id: number; choices: string[] }
   | { t: 'dash'; id: number }
+  | { t: 'chest'; x: number; z: number }              // elite died and dropped a chest pickup (kind 3)
   | { t: 'waveStart'; wave: number }
   | { t: 'bossSpawn'; x: number; z: number; bossId: string }
   | { t: 'bossDeath'; x: number; z: number; bossId: string }

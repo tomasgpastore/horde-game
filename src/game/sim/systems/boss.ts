@@ -9,7 +9,7 @@ export const bossSystem: System = { name: 'boss', update(s, c) {
   if (!s.boss) {
     for (const ev of s.events) if (ev.t === 'bossSpawn' && BOSSES[ev.bossId]) {
       const i = alloc(e.alive, e.count, MAX_ENEMIES); if (i < 0) break; const d = BOSSES[ev.bossId];
-      e.alive[i] = 1; e.kind[i] = BOSS_KIND; e.x[i] = ev.x; e.z[i] = ev.z; e.vx[i] = e.vz[i] = 0; e.hp[i] = d.hp; e.hitFlash[i] = 0; if (i >= e.count) e.count = i + 1;
+      e.alive[i] = 1; e.kind[i] = BOSS_KIND; e.x[i] = ev.x; e.z[i] = ev.z; e.vx[i] = e.vz[i] = 0; e.elite[i] = 0; e.hp[i] = d.hp; e.hitFlash[i] = 0; if (i >= e.count) e.count = i + 1;
       s.boss = { idx: i, id: ev.bossId, maxHp: d.hp, t: 0, mode: 0, dx: 0, dz: 1 }; break;
     }
     return;
