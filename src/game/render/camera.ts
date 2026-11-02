@@ -18,7 +18,8 @@ export class CameraRig {
     if (!this.inited) { this.tx = gx; this.tz = gz; this.inited = true; }
     this.tx += (gx - this.tx) * k(9); this.tz += (gz - this.tz) * k(9);
     // pull out slightly in big hordes
-    const zt = 1 + Math.min(0.18, enemyCount / 1500) + this.zoomBoost;
+    const asp = this.cam.aspect || 1; const portrait = asp < 1 ? Math.min(1.9, Math.max(1, 0.9 / asp)) : 1; // phones in portrait: pull the camera back so ~16-20u are visible across
+    const zt = (1 + Math.min(0.18, enemyCount / 1500) + this.zoomBoost) * portrait;
     this.zoom += (zt - this.zoom) * k(1.5);
     const sh = this.trauma * this.trauma * this.shakeScale;
     const n = (f: number, s: number) => Math.sin(this.t * f + s) * Math.sin(this.t * f * 0.37 + s * 2.1);
