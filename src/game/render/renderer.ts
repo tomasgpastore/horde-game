@@ -87,7 +87,17 @@ export class Renderer {
     this.scene.add(s.target);
   }
 
+  private slowT = 0; private slowN = 0; private shakeSet: boolean | number = true;
+  /** Auto-degrade: if the GPU can't hold ~25fps for 0.8s, drop one quality tier (high->med->low). Never upgrades. */
+  private watchPerf(rawDt: number) {
+    if (this.quality === 'low' || rawDt <= 0 || rawDt > 0.5) return;
+    this.slowT += rawDt; this.slowN++;
+    if (this.slowT < 0.8) return;
+    if (this.slowT / this.slowN > 0.04) this.applySettings({ quality: this.quality === 'high' ? 'med' : 'low', shake: this.shakeSet });
+    this.slowT = 0; this.slowN = 0;
+  }
   applySettings(st: RenderSettings) {
+    this.shakeSet = st.shake;
     this.quality = st.quality; this.rig.shakeScale = st.shake === false ? 0 : st.shake === true ? 1 : Number(st.shake);
     this.pr = Math.min(devicePixelRatio, st.quality === 'high' ? 2 : st.quality === 'med' ? 1.5 : 1);
     this.three.setPixelRatio(this.pr);
@@ -120,7 +130,7 @@ export class Renderer {
   }
 
   render(s: SimState, dt: number, alpha: number) {
-    this.clock += dt; const t = this.clock, ex = alpha * TICK_DT;
+    this.watchPerf(dt); this.clock += dt; const t = this.clock, ex = alpha * TICK_DT;
     // players (extrapolate by velocity for smoothness between 60Hz ticks)
     let me = s.players[0];
     for (let i = 0; i < this.playerMeshes.length; i++) {
