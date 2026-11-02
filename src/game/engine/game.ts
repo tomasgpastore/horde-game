@@ -82,7 +82,7 @@ export class Game {
     if (bd < 144) { const l = Math.sqrt(bd) || 1; sx += gx / l * 0.12; sz += gz / l * 0.12; }
     this.botT += 1 / 60; const a = this.botT * 0.5;
     // stay in the middle (good trailer framing): pull toward arena centre, ramping hard beyond ~9u so the bot never reaches the edge
-    const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 9) / 12); const w = 0.02 + 2.5 * pull * pull;
+    const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 6) / 10); const w = 0.02 + 4 * pull * pull + (r > 22 ? 50 : 0); // hard inward override beyond 22u (camera clamp is at R-9)
     let mx = sx + Math.cos(a) * 0.02 - me.x / r * w, mz = sz + Math.sin(a) * 0.02 - me.z / r * w; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
