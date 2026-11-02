@@ -5,7 +5,7 @@ import type { SimState } from '@shared/types';
 import { enemyDef } from '../content/enemies';
 /** Swarm events every SWARM_EVERY s (from SWARM_START): alternating STAMPEDE LINE (a wall of skitters sweeping in from one side)
  *  and ENCIRCLE (ring of skitters closing in). 30–60 enemies at once, even past the soft alive cap (+80). Deterministic (ctx.rng). */
-export const SWARM_START = 30, SWARM_EVERY = 45, SKITTER = 3;
+export const SWARM_START = 40, SWARM_EVERY = 45, SKITTER = 3;
 function put(s: SimState, kind: number, x: number, z: number): boolean {
   const e = s.enemies, i = alloc(e.alive, e.count, MAX_ENEMIES); if (i < 0) return false;
   e.alive[i] = 1; e.kind[i] = kind; e.flags[i] = 0; e.x[i] = x; e.z[i] = z; e.vx[i] = e.vz[i] = 0; e.hitFlash[i] = 0; e.facing[i] = 0;

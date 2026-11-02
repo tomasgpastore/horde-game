@@ -33,8 +33,8 @@ export function waveFor(wave: number): WaveDef {
   const w = Math.max(1, wave);
   return {
     wave: w,
-    rate: 2.2 + w * 1.0 + Math.pow(w, 1.5) * 0.55,
-    cap: Math.min(limits.maxAlive, 70 + w * 50),
+    rate: 1.6 + w * 1.4 + Math.pow(w, 1.5) * 0.3,
+    cap: Math.min(limits.maxAlive, 60 + w * 45),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
     surge: w >= 3 ? { every: 26, count: 8 + w * 3 } : undefined,
   };
