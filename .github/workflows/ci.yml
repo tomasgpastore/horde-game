@@ -105,5 +105,5 @@ jobs:
           if [ -n "$N" ] && [ "$N" != null ]; then
             gh issue comment "$N" --body "$(printf "$BODY")"
           else
-            gh issue create --title "$TITLE" --label sev2 --label area:web --body "$(printf "$BODY")"
+            gh issue create --title "$TITLE" --label sev2-major --label area:web --body "$(printf "$BODY")"
           fi
