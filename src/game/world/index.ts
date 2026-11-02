@@ -12,7 +12,7 @@ function make(id: string, name: string, radius: number, palette: ArenaDef['palet
 const ashenWoods = make('ashen_woods', 'Ashen Woods', 40,
   { ground: 0x4a4056, fog: 0x1a1722, sky: 0x1a1722, accent: 0xff7a2f, light: 0xffd8a8 },
   { seed: 101, obstacleKinds: ['tree', 'tree', 'rock', 'pillar'], obstacleCount: 20, obstacleR: [1.2, 2.4], clearRadius: 7,
-    scatter: [{ kind: 'tree', count: 60, scale: [0.6, 1.1] }, { kind: 'bone', count: 140, scale: [0.5, 1.1] }, { kind: 'rock', count: 180, scale: [0.2, 0.55] }, { kind: 'brazier', count: 12, scale: [0.8, 1] }],
+    scatter: [{ kind: 'tree', count: 60, scale: [0.6, 1.1] }, { kind: 'bone', count: 140, scale: [0.5, 1.1] }, { kind: 'rock', count: 180, scale: [0.2, 0.55] }, { kind: 'brazier', count: 0, scale: [0.8, 1] }],
     propColors: [0x4a4256, 0x3a3446, 0x5b5266], glowColor: 0xff7a2f, ember: { count: 500, color: 0xff9a4a, rise: 1.6, size: 0.55 },
     hemiSky: 0xffb890, groundNoise: [0x4a4056, 0x5f5068], fog: { count: 70, color: 0x8a7a9a, opacity: 0.12 }, lightIntensity: 2, sunDir: [10, 25, 8] });
 
