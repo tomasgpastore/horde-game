@@ -69,7 +69,7 @@ export interface SimState {
   enemies: EnemyPool; projectiles: ProjectilePool; pickups: PickupPool;
   events: SimEvent[];
   phase: 'running' | 'levelUp' | 'gameOver';
-  wave: number; kills: number; gold: number; eliteCount: number;
+  wave: number; kills: number; gold: number; eliteCount: number; swarmCount: number;
   /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
   levelChoices: string[];
   /** World-owned spawner state (plain numbers => snapshot/rollback safe). */
