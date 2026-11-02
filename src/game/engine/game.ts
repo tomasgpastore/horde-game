@@ -5,6 +5,7 @@ import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
+import { WsSession } from '@net/ws';
 import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
@@ -26,10 +27,18 @@ export class Game {
     const arena = getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods'); const seed = Number(new URLSearchParams(location.search).get('seed')) || (Date.now() & 0xffffff);
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
-  choose(i: number) { if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
-  start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); audio.resume(); this.audio.startRun(); }
+  net: WsSession | null = null;
+  choose(i: number) { if (this.net) { this.net.choose(i); return; } if (this.sim.state.phase === 'levelUp') { this.sim.choose(i); this.audio.ui('card'); } }
+  start(mode: 'solo' | 'coop') {
+    this.net?.close(); this.net = null; this.mode = mode; this.reset();
+    if (mode === 'coop') { // authoritative server: sim state is written by WsSession from snapshots
+      const q = new URLSearchParams(location.search), arena = q.get('arena') || undefined;
+      const net = this.net = new WsSession(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`, q.get('room') || undefined, arena);
+      net.radius = this.sim.arena.radius - 0.5;
+      net.onClose = (why) => { if (this.net === net && this.running) { this.net = null; dispatchEvent(new CustomEvent('net:closed', { detail: { reason: why } })); } };
+    } this.running = true; this.paused = false; this.last = performance.now(); audio.resume(); this.audio.startRun(); }
   pause() { this.paused = true; audio.suspend(); } resume() { this.paused = false; this.last = performance.now(); audio.resume(); }
-  quit() { this.running = false; this.paused = false; this.reset(); audio.resume(); this.audio.stop(); } // un-suspend (Quit while paused) and clear run music; shell then plays the title theme
+  quit() { this.net?.close(); this.net = null; this.running = false; this.paused = false; this.reset(); audio.resume(); this.audio.stop(); } // un-suspend (Quit while paused) and clear run music; shell then plays the title theme
   applySettings(s: Settings) {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
@@ -64,7 +73,7 @@ export class Game {
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
-    const me = this.sim.state.players[0];
+    const me = this.sim.state.players[this.net?.localPlayerId ?? 0];
     if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
     if (this.running && !this.paused) {
       const r = this.renderer; this.acc += dt * (r.slowmo > 0 ? 0.3 : 1); if (r.slowmo > 0) r.slowmo -= dt; // level-up slow-mo (sim stays fixed-step)
@@ -75,7 +84,7 @@ export class Game {
       if (!this.autoplay) Object.assign(inp, this.pad.poll(inp)); // physical gamepad: right-stick aim, A/RB dash, X/LB ability
       if (this.hitstop > 0) { this.hitstop -= dt; this.acc = 0; }
       while (this.acc >= TICK_DT) {
-        this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
+        if (this.net) this.net.tick(inp, this.sim.state); else this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
         this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); for (const ev of this.sim.state.events) if (ev.t === 'freeze') this.hitstop = Math.max(this.hitstop, ev.ms / 1000); else if (ev.t === 'slow') this.renderer.slowmo = Math.max(this.renderer.slowmo, ev.secs);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
