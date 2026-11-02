@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { watchErrors } from './helpers/errors';
 test('boots, renders, sim advances', async ({ page }, info) => {
-  const errors: string[] = []; page.on('pageerror', e => errors.push(String(e))); page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  const errors = watchErrors(page);
   await page.goto('/'); await page.click('button[data-a=play]'); await page.waitForTimeout(3000);
   await page.keyboard.down('KeyD'); await page.waitForTimeout(1500); await page.keyboard.up('KeyD');
   const st = await page.evaluate(() => { const g = (window as any).__game; return { tick: g.sim.state.tick, x: g.sim.state.players[0].x, fps: g.fps, enemies: g.sim.state.enemies.count }; });
