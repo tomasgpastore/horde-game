@@ -34,13 +34,13 @@ export class Renderer {
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
     this.enemies = new EnemyRenderer(this.scene); this.dmg = new DamageNumbers(canvas.parentElement ?? document.body);
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
-    this.projMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.3), emissive(0xffffff), MAX_PROJECTILES);
+    this.projMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.46), emissive(0xffffff), MAX_PROJECTILES);
     this.projMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3);
     this.ringMesh = new THREE.InstancedMesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }), 64);
     this.ringMesh.frustumCulled = false; this.scene.add(this.ringMesh);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4de8ff).multiplyScalar(2.6) }), MAX_PICKUPS);
     for (const m of [this.projMesh, this.gemMesh]) { m.frustumCulled = false; this.scene.add(m); }
-    const hero = createHero({ scale: 1.3 }); this.playerMesh = hero.group; this.lantern = hero.lantern; this.scene.add(this.playerMesh);
+    const hero = createHero({ scale: 1.6 }); this.playerMesh = hero.group; this.lantern = hero.lantern; this.scene.add(this.playerMesh);
     this.pMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffffff }), Renderer.NP);
     this.pMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Renderer.NP * 3), 3); this.pMesh.frustumCulled = false; this.pMesh.count = 0; this.scene.add(this.pMesh);
     this.composer = new EffectComposer(this.three); this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -55,7 +55,9 @@ export class Renderer {
     for (let k = 0; k < n; k++) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; const a = Math.random() * 6.283, v = spd * (0.4 + Math.random());
       this.px[i * 3] = x; this.px[i * 3 + 1] = 0.6; this.px[i * 3 + 2] = z; this.pv[i * 3] = Math.cos(a) * v; this.pv[i * 3 + 1] = 2 + Math.random() * 4; this.pv[i * 3 + 2] = Math.sin(a) * v; this.pl[i] = 0.5 + Math.random() * 0.4; this.pcol[i] = col; }
   }
-  pcol = new Uint32Array(Renderer.NP);
+  pcol = new Uint32Array(Renderer.NP); trailT = 0;
+  /** Bolt trail: one short-lived ember per bolt per frame (no velocity => reads as a streak). */
+  private trail(x: number, z: number) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; this.px[i * 3] = x; this.px[i * 3 + 1] = 0.8; this.px[i * 3 + 2] = z; this.pv[i * 3] = this.pv[i * 3 + 2] = 0; this.pv[i * 3 + 1] = 1; this.pl[i] = 0.28; this.pcol[i] = 0xffb347; }
   consumeEvents(ev: SimEvent[]) { // visual-only randomness is fine here (never feeds the sim)
     for (const e of ev) {
       if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
@@ -85,7 +87,7 @@ export class Renderer {
     if (b && b.mode === 1) { const e = s.enemies, L = 22, ang = Math.atan2(b.dx, b.dz); this.tele.position.set(e.x[b.idx] + b.dx * L / 2, 0.06, e.z[b.idx] + b.dz * L / 2); this.tele.rotation.set(-Math.PI / 2, 0, -ang); this.tele.scale.set(3.2, L, 1); (this.tele.material as THREE.MeshBasicMaterial).opacity = 0.2 + 0.25 * Math.abs(Math.sin(s.time * 18)); }
     this.enemies.update(s.enemies, s.time, ex); this.dmg.update(dt, this.camera); let n = 0;
     n = 0; let rn = 0; const pr = s.projectiles; for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
-      const k = pr.kind[i];
+      const k = pr.kind[i]; if (k === 0 && (this.trailT += 0) >= 0) this.trail(pr.x[i], pr.z[i]);
       if (k === 2) { const maxLife = 0.35, f = 1 - pr.life[i] / maxLife, r = pr.vx[i] * f; this.m.position.set(pr.x[i], 0.15, pr.z[i]); this.m.rotation.set(-Math.PI / 2, 0, 0); this.m.scale.set(r, r, r); this.m.updateMatrix(); this.ringMesh.setMatrixAt(rn++, this.m.matrix); continue; }
       this.m.position.set(pr.x[i], 0.8, pr.z[i]); this.m.rotation.set(0, s.time * 8, 0); this.m.scale.setScalar(k === 1 ? 1.8 : k === 3 ? 2.2 : 1); this.m.updateMatrix(); this.projMesh.setMatrixAt(n, this.m.matrix);
       this.flashColor.setHex(k === 1 ? 0x6fe8ff : k === 3 ? 0xfff6a8 : 0xffd27a); this.flashColor.multiplyScalar(2.8); this.projMesh.setColorAt(n, this.flashColor); n++; }
