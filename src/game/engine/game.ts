@@ -4,7 +4,7 @@ import { Renderer } from '@render/renderer';
 import { KeyboardMouse } from './input';
 import { getArena } from '@world/index';
 import { mountHud } from '@ui/hud';
-import { Audio } from '@audio/index';
+import { Audio, audio } from '@audio/index';
 import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
@@ -18,6 +18,7 @@ export class Game {
     this.input = new KeyboardMouse(this.canvas);
     this.reset(); this.renderer = new Renderer(this.canvas, getArena(new URLSearchParams(location.search).get('arena') || 'ashen_woods')); this.hud = mountHud(this.ui);
     (window as any).__game = this; // QA hook
+    this.applySettings(settings);
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
   }
   reset() {
@@ -25,9 +26,15 @@ export class Game {
     this.sim = new Sim(createState(seed, arena, 1), arena); this.acc = 0;
   }
   start(mode: 'solo' | 'coop') { this.mode = mode; this.reset(); this.running = true; this.paused = false; this.last = performance.now(); }
-  pause() { this.paused = true; } resume() { this.paused = false; this.last = performance.now(); }
+  pause() { this.paused = true; audio.suspend(); } resume() { this.paused = false; this.last = performance.now(); audio.resume(); }
   quit() { this.running = false; this.paused = false; this.reset(); }
-  applySettings(s: Settings) { this.settings = s; /* TODO Engine: volume -> audio, quality -> pixelRatio/post-fx, shake */ }
+  applySettings(s: Settings) {
+    this.settings = s;
+    audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
+    const r = (this.renderer as any)?.three; if (r) r.setPixelRatio(Math.min(devicePixelRatio, s.quality === 'low' ? 1 : s.quality === 'high' ? 2 : 1.5));
+    dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
+    // TODO Engine: screenshake honours s.shake
+  }
   gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, time: s.time, victory } })); }
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
@@ -36,7 +43,8 @@ export class Game {
     if (this.running && !this.paused) {
       this.acc += dt;
       const inp: PlayerInput = this.input.poll(me, this.renderer.camera);
-      const m = this.shellInput.move; if (this.shellInput.touch && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; }
+      const si = this.shellInput, m = si.move; if (m.x || m.y) { inp.moveX = m.x; inp.moveZ = m.y; } // touch stick or gamepad (shell)
+      if (si.dash) { inp.dash = true; si.dash = false; }
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
         this.audio.consume(this.sim.state.events); this.renderer.consumeEvents(this.sim.state.events);
