@@ -14,8 +14,8 @@ const mk = (cls, html) => { const e = $(`<div class="screen ${cls}">${html}</div
 const show = (...s) => { for (const e of Object.values(screens)) e.classList.add('hidden'); s.forEach(e => screens[e].classList.remove('hidden')); };
 
 const screens = {
-  loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div>`),
-  menu: mk('hidden', `<h1>EMBERHORDE</h1><p class="tag">Survive the night</p>
+  loading: mk('', `<h1>EMBERHORDE</h1><div class="bar"><i></i></div><div class="tag" id="ltxt">Loading…</div><div class="hints" id="tip"></div>`),
+  menu: mk('hidden', `<h1>EMBERHORDE</h1><p class="tag">Survive the swarm. Build the impossible.</p>
     <button class="btn primary" data-a="play">Play</button><button class="btn" data-a="coop">Co-op</button>
     <button class="btn" data-a="settings">Settings</button><button class="btn" data-a="credits">Credits</button>
     <div class="hints" id="hints"></div>`),
@@ -82,6 +82,8 @@ addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p') togg
 addEventListener('blur', () => { if (state === 'playing') toggle(); });
 addEventListener('game:over', (e) => { setState('over'); screens.over.querySelector('#score').textContent = e.detail ? `Score ${e.detail.score ?? ''} · ${Math.round(e.detail.time ?? 0)}s` : ''; show('over'); });
 
+const TIPS=['Standing still is how you die.','Weapons that fit together beat weapons that are strong.'];
+screens.loading.querySelector('#tip').textContent=TIPS[Math.random()*TIPS.length|0];
 // boot
 (async () => {
   if (!webgl) return show('nogl');
