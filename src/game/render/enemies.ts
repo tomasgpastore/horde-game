@@ -9,7 +9,7 @@ import { MAX_ENEMIES } from '@shared/types';
  *  Kind index = ENEMIES table index: 0 husk, 1 wisp, 2 brute, 3 skitter, 4 bloater, 5 shield knight, 6 spitter, 7 wraith. */
 type G = THREE.BufferGeometry;
 interface Part { g: G; x?: number; y?: number; z?: number; rx?: number; ry?: number; rz?: number; sx?: number; sy?: number; sz?: number }
-interface Look { body: number; glow: number; parts: Part[]; glowParts: Part[]; float?: number; bob?: number; scale?: number }
+interface Look { body: number; glow: number; parts: Part[]; glowParts: Part[]; float?: number; hot?: number; /* 0..1 lerp of the glow mesh toward white-hot, for contrast on violet */ bob?: number; scale?: number }
 
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
 const cone = (r: number, h: number, s = 6) => new THREE.ConeGeometry(r, h, s);
@@ -24,9 +24,9 @@ const LOOKS: Look[] = [
     glowParts: [{ g: box(0.12, 0.08, 0.06), x: 0.1, y: 1.15, z: 0.57 }, { g: box(0.12, 0.08, 0.06), x: -0.1, y: 1.15, z: 0.57 }],
   },
   { // 1 WISP: floating magenta core in thorns
-    body: 0x2a0f26, glow: 0xff2e88, float: 0.9, bob: 0.25,
+    body: 0x2a0f26, glow: 0xff2e88, float: 0.9, bob: 0.25, hot: 0.14,
     parts: [{ g: cone(0.12, 0.7, 4), y: 0.5, rx: Math.PI, sx: 1 }, { g: cone(0.1, 0.5, 4), x: 0.35, y: 0, rz: -Math.PI / 2 }, { g: cone(0.1, 0.5, 4), x: -0.35, y: 0, rz: Math.PI / 2 }, { g: cone(0.1, 0.6, 4), y: -0.45 }],
-    glowParts: [{ g: ico(0.3, 1) }],
+    glowParts: [{ g: ico(0.36, 1) }],
   },
   { // 2 BRUTE: blocky lime-cracked tank
     body: 0x24301a, glow: 0xb6ff3b, scale: 1.0, bob: 0.04,
@@ -83,7 +83,7 @@ export class EnemyRenderer {
   constructor(scene: THREE.Scene) {
     LOOKS.forEach((l, k) => {
       const bm = new THREE.InstancedMesh(build(l.parts), addRim(new THREE.MeshLambertMaterial({ color: l.body, flatShading: true, emissive: l.glow, emissiveIntensity: 0.07 }), l.glow, 0.8), MAX_ENEMIES);
-      const gm = new THREE.InstancedMesh(build(l.glowParts), new THREE.MeshBasicMaterial({ color: new THREE.Color(l.glow).multiplyScalar(1.7), toneMapped: false }), MAX_ENEMIES);
+      const gm = new THREE.InstancedMesh(build(l.glowParts), new THREE.MeshBasicMaterial({ color: new THREE.Color(l.glow).lerp(new THREE.Color(0xffffff), l.hot ?? 0).multiplyScalar(1.7), toneMapped: false }), MAX_ENEMIES);
       bm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_ENEMIES * 3).fill(1), 3);
       for (const x of [bm, gm]) { x.frustumCulled = false; x.count = 0; scene.add(x); }
       bm.castShadow = k !== 1; this.body.push(bm); this.glow.push(gm);
