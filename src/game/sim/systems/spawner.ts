@@ -6,7 +6,7 @@ import type { SimState } from '@shared/types';
 import { waveFor, waveAt, WAVE_SECONDS, ARENA_BOSS } from '@world/waves';
 /** World-owned: wave pacing, off-screen spawn ring, ring surges, boss events. Deterministic (ctx.rng only).
  *  Enemy base stats come from Gameplay; here we only set position/kind/hp placeholder via `spawnHp`. */
-export const SPAWN_DIST = 24;
+export const SPAWN_DIST = 17;
 
 export const spawnHp = (kind: number, wave: number) => enemyDef(kind).hp * (1 + wave * 0.12);
 
