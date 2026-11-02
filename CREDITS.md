@@ -12,6 +12,8 @@
 | Tool | ffmpeg-static (ffmpeg binary) | Eugene Sharygin / FFmpeg team | GPL-3.0 binary, used build-time only, not shipped | https://github.com/eugeneware/ffmpeg-static | Audio transcode in `npm run assets` (only if raw audio is added) | Web |
 | Tool | Playwright | Microsoft | Apache-2.0 | https://github.com/microsoft/playwright | Tests, screenshots, footage capture | QA |
 | Art | Upgrade/weapon icons (inline SVG) | Artist | Original (studio) | src/game/art/icons.ts | Level-up cards | Artist |
+| Tool | esbuild | Evan Wallace | MIT | https://github.com/evanw/esbuild | Bundles sim for headless determinism test (`npm run test:determinism`), dev-only | Netcode |
+| Library | ws | Einar Otto Stangvik & contributors | MIT | https://github.com/websockets/ws | Authoritative co-op WebSocket server | Netcode |
 | *(add rows)* | | | | | | |
 
 ## CC-BY attribution text (shown in-game Credits screen)

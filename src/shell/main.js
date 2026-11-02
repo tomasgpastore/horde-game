@@ -3,8 +3,17 @@ import '@fontsource/rajdhani/latin-600.css';
 import '@fontsource/rajdhani/latin-700.css';
 const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
 const root = document.getElementById('shell');
-const DEF = { volume: 0.8, music: 0.7, sfx: 0.9, quality: 'med', shake: true };
+const DEF = { volume: 0.8, music: 0.7, sfx: 0.9, quality: 'med', qualityPref: 'auto', shake: true };
 let settings = { ...DEF, ...JSON.parse(localStorage.getItem('eh-settings') || '{}') };
+// Quality: user picks Auto/Low/High (qualityPref, persisted); `quality` is what the game gets (low|med|high). ?quality=low|high overrides (QA).
+const urlQ = new URLSearchParams(location.search).get('quality');
+if (!['auto', 'low', 'high'].includes(settings.qualityPref)) settings.qualityPref = 'auto';
+if (['auto', 'low', 'high'].includes(urlQ)) settings.qualityPref = urlQ;
+const autoQuality = () => matchMedia('(pointer:coarse)').matches ? 'low'
+  : navigator.webdriver ? 'med' // automated desktop runs keep the old default so tests are stable
+  : (navigator.deviceMemory <= 4 || navigator.hardwareConcurrency <= 4) ? 'low' : 'high';
+const resolveQuality = () => { settings.quality = settings.qualityPref === 'auto' ? autoQuality() : settings.qualityPref; };
+resolveQuality();
 const save = () => localStorage.setItem('eh-settings', JSON.stringify(settings));
 const input = { move: { x: 0, y: 0 }, dash: false, touch: matchMedia('(pointer:coarse)').matches };
 if (input.touch) document.body.classList.add('touch');
@@ -34,7 +43,7 @@ const screens = {
     <label>Master volume<input type="range" min="0" max="1" step=".05" data-k="volume"></label>
     <label>Music<input type="range" min="0" max="1" step=".05" data-k="music"></label>
     <label>SFX<input type="range" min="0" max="1" step=".05" data-k="sfx"></label>
-    <label>Quality<select data-k="quality"><option value="low">Low</option><option value="med">Medium</option><option value="high">High</option></select></label>
+    <label>Quality<select data-k="qualityPref"><option value="auto">Auto (recommended)</option><option value="low">Low (best for phones)</option><option value="high">High</option></select></label>
     <label>Screen shake<input type="checkbox" data-k="shake"></label>
     <button class="btn" data-a="back">Back</button></div>`),
   credits: mk('hidden', `<div class="panel"><h2>Credits</h2><p>Made by a studio of 15 AI agents.<br>Built with Three.js &amp; Vite.<br>Font: Rajdhani by Indian Type Foundry (SIL OFL 1.1).<br>All music &amp; sound effects are synthesized in-game.<br>Full licenses: CREDITS.md in the repo.</p><button class="btn" data-a="back">Back</button></div>`),
@@ -57,7 +66,9 @@ screens.menu.querySelector('#hints').innerHTML = input.touch
 const syncSettings = () => screens.settings.querySelectorAll('[data-k]').forEach(el => {
   const v = settings[el.dataset.k]; el.type === 'checkbox' ? (el.checked = v) : (el.value = v); });
 screens.settings.addEventListener('input', e => { const el = e.target, k = el.dataset.k; if (!k) return;
-  settings[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; save(); game?.applySettings(settings); });
+  settings[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+  if (k === 'qualityPref') { resolveQuality(); if (settings.quality === 'low' && title) { title.dispose(); title = null; document.body.classList.remove('scene-on'); } }
+  save(); game?.applySettings(settings); });
 syncSettings();
 
 // virtual stick
@@ -89,7 +100,7 @@ let lastHover = null;
 root.addEventListener('pointerover', e => { const b = e.target.closest?.('.btn'); if (b && b !== lastHover) ui?.ui('hover'); lastHover = b || null; });
 root.addEventListener('click', async (e) => {
   const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play') musicTitle();
+  ui?.ui(a === 'back' ? 'back' : 'click'); if (a === 'play') { musicTitle(); ui?.stinger(); }
   if (a === 'play') { mode = 'solo'; if (title) { for (const b of root.querySelectorAll('.btn')) b.disabled = true; await title.transitionOut(); for (const b of root.querySelectorAll('.btn')) b.disabled = false; } show(); game.quit(); game.start({ mode }); setState('playing'); title?.reveal(); }
   else if (a === 'settings') { show('settings'); screens.settings.dataset.from = 'menu'; }
   else if (a === 'psettings') { show('settings'); screens.settings.dataset.from = 'pause'; }

@@ -12,6 +12,7 @@ import { OccluderFader } from './occluders';
 import { createHero } from './hero';
 import { CameraRig } from './camera';
 import { EnemyRenderer, KIND_COLORS } from './enemies';
+import { BOSS_COLORS } from './bosses';
 import { Vfx, createTelegraph } from './vfx';
 import { DamageNumbers } from './dmgnums';
 import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
@@ -27,13 +28,15 @@ export class Renderer {
   composer: EffectComposer; bloomOn = new URLSearchParams(location.search).get('bloom') !== '0'; // ?bloom=0 for software-GL CI shake = 0;
   // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
   static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
-  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
+  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
+    const pr = Math.min(devicePixelRatio, q === 'low' ? 1.25 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight);
+    const sh = q !== 'low'; if (this.three.shadowMap.enabled !== sh) { this.three.shadowMap.enabled = sh; this.scene.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (m) [m].flat().forEach(x => x.needsUpdate = true); }); } }
   occ!: OccluderFader; tele!: THREE.Mesh; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
     this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
-    this.arena = def.build(this.scene); buildBoundary(this.scene, def);
+    this.arena = def.build(this.scene); buildBoundary(this.scene, def); this.rig.maxR = def.radius - 9;
     this.tele = createTelegraph(); this.scene.add(this.tele); this.vfx = new Vfx(this.scene);
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
     if (this.sun) { this.sunOff.copy(this.sun.position); this.scene.add(this.sun.target); const sc = this.sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.normalBias = 0.04; }
@@ -64,7 +67,7 @@ export class Renderer {
       else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
       else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
-      else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); }
+      else if (e.t === 'bossSpawn') { this.rig.addTrauma(0.7); this.vfx.bossBurst(e.x, e.z); } else if (e.t === 'bossDeath') { this.rig.addTrauma(1); this.vfx.bossBurst(e.x, e.z); this.vfx.bossDeath(e.x, e.z, BOSS_COLORS[e.bossId as keyof typeof BOSS_COLORS] ?? 0xff3355); this.burst(e.x, e.z, 60, 0xffd35a, 18); }
       else if (e.t === 'levelUp') { this.rig.addTrauma(0.2); this.slowmo = 0.6; this.vfx.levelUp(this.playerMesh.position.x, this.playerMesh.position.z); this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9); }
     }
   }

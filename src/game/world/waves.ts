@@ -10,6 +10,8 @@ export interface WaveDef {
 }
 /** Global alive-enemy cap (perf budget: 60fps target on mid GPUs). Raise only with QA perf data. */
 export const MAX_ALIVE = 400;
+/** Runtime cap (Low quality lowers it; set via Game.applySettings). */
+export const limits = { maxAlive: MAX_ALIVE };
 export const WAVE_SECONDS = 40;
 /** Per-arena boss: emitted as bossSpawn at `time` seconds (GDD: min 5/10/15). */
 export const ARENA_BOSS: Record<string, { bossId: string; time: number }> = {
@@ -32,9 +34,9 @@ export function waveFor(wave: number): WaveDef {
   return {
     wave: w,
     rate: 3.2 + w * 1.5 + Math.pow(w, 1.35) * 0.2,
-    cap: Math.min(MAX_ALIVE, 100 + w * 50),
+    cap: Math.min(limits.maxAlive, 100 + w * 50),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
-    surge: w >= 2 ? { every: 16, count: 14 + w * 4 } : undefined,
+    surge: w >= 1 ? { every: 16, count: 12 + w * 4 } : undefined,
   };
 }
 export const waveAt = (time: number) => Math.floor(time / WAVE_SECONDS) + 1;

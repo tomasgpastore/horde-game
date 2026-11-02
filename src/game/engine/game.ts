@@ -3,6 +3,7 @@ import { Sim, createState } from '@sim/index';
 import { Renderer } from '@render/renderer';
 import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
+import { limits, MAX_ALIVE } from '@world/waves';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
 import type { Settings, ShellInput } from './createGame';
@@ -34,6 +35,7 @@ export class Game {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
     const r = (this.renderer as any)?.three; if (r) (this.renderer as any).setQuality(s.quality);
+    limits.maxAlive = s.quality === 'low' ? 200 : MAX_ALIVE; // Low: fewer enemies alive
     dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
     (this.renderer as any)?.setShake?.(s.shake);
   }
@@ -54,7 +56,9 @@ export class Game {
     for (let i = 0; i < pk.count; i++) if (pk.alive[i]) { const dx = pk.x[i] - me.x, dz = pk.z[i] - me.z, d2 = dx * dx + dz * dz; if (d2 < bd) { bd = d2; gx = dx; gz = dz; } }
     if (bd < 144) { const l = Math.sqrt(bd) || 1; sx += gx / l * 0.12; sz += gz / l * 0.12; }
     this.botT += 1 / 60; const a = this.botT * 0.5;
-    let mx = sx + Math.cos(a) * 0.02 - me.x * 0.0008, mz = sz + Math.sin(a) * 0.02 - me.z * 0.0008; const l = Math.hypot(mx, mz) || 1;
+    // stay in the middle (good trailer framing): pull toward arena centre, ramping hard beyond ~9u so the bot never reaches the edge
+    const r = Math.hypot(me.x, me.z) || 1, pull = Math.max(0, (r - 9) / 12); const w = 0.02 + 2.5 * pull * pull;
+    let mx = sx + Math.cos(a) * 0.02 - me.x / r * w, mz = sz + Math.sin(a) * 0.02 - me.z / r * w; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
   hitstop = 0;
