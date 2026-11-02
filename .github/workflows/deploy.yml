@@ -1,3 +1,4 @@
+# DO NOT EDIT without Launch Lead/DevOps
 name: Deploy
 on:
   push:
@@ -15,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Smoke test
@@ -31,3 +32,10 @@ jobs:
             [ $ok = 1 ] || { echo "smoke FAILED: $path -> $code"; exit 1; }
             echo "smoke ok: $path"
           done
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: WebSocket smoke test
+        run: |
+          APP=$(sed -n "s/^app *= *['\"]\(.*\)['\"]/\1/p" fly.toml | head -1)
+          for i in 1 2 3; do node scripts/ws-smoke.mjs "wss://$APP.fly.dev/ws" && exit 0; sleep 5; done
+          exit 1
