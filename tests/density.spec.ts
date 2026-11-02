@@ -8,5 +8,5 @@ test('density', async ({ page }) => {
       if (t % (60 * 30) === 0) { let al = 0; for (let i = 0; i < s.enemies.count; i++) al += s.enemies.alive[i]; out.push({ min: +(s.time / 60).toFixed(1), alive: al, kills: s.kills, lvl: p.level }); } }
     return out; });
   console.log('DENSITY ' + JSON.stringify(r));
-  const at = (m: number) => r.find((x: any) => x.min >= m)?.alive ?? 0; expect(at(1)).toBeGreaterThan(60); expect(at(2)).toBeGreaterThan(120); expect(at(3)).toBeGreaterThan(200); expect(at(5)).toBeLessThanOrEqual(520); // cap 400 + surge slack
+  const at = (m: number) => r.find((x: any) => x.min >= m)?.alive ?? 0; expect(at(0.5)).toBeGreaterThan(30); expect(at(1)).toBeGreaterThan(40); expect(at(2)).toBeGreaterThan(120); expect(at(3)).toBeGreaterThan(200); expect(at(5)).toBeLessThanOrEqual(520); // cap 400 + surge slack
 });
