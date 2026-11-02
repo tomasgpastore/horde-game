@@ -5,7 +5,7 @@ import type { Vfx } from './vfx';
 /** Instanced drawing of projectiles (bolts+trails, orbit blades, chain sparks, nova rings, lava discs) and XP gems.
  *  Projectile kinds: 0 bolt, 1 orbit blade, 2 nova ring, 3 chain spark, 4 lava patch, 5 seeker spear. Add new kinds HERE, not in renderer.ts. */
 export class ProjectileRenderer {
-  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; bladeMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh;
+  projMesh!: THREE.InstancedMesh; trailMesh!: THREE.InstancedMesh; ringMesh!: THREE.InstancedMesh; lavaMesh!: THREE.InstancedMesh; bladeMesh!: THREE.InstancedMesh; gemMesh!: THREE.InstancedMesh; chestMesh!: THREE.InstancedMesh;
   private m = new THREE.Object3D(); private flashColor = new THREE.Color(0xffffff);
   constructor(scene: THREE.Scene, private vfx: Vfx) {
     const emissive = (c: number) => new THREE.MeshBasicMaterial({ color: c });
@@ -22,7 +22,8 @@ export class ProjectileRenderer {
     this.lavaMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PROJECTILES * 3), 3); this.lavaMesh.frustumCulled = false; this.lavaMesh.count = 0; scene.add(this.lavaMesh);
     this.gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.22), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4de8ff).multiplyScalar(2.6) }), MAX_PICKUPS);
     { const bg = new THREE.OctahedronGeometry(0.5, 0); bg.scale(0.5, 0.12, 1.5); this.bladeMesh = new THREE.InstancedMesh(bg, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xbff6ff).multiplyScalar(3), toneMapped: false }), 64); this.bladeMesh.frustumCulled = false; this.bladeMesh.count = 0; scene.add(this.bladeMesh); }
-    for (const m of [this.projMesh, this.gemMesh]) { m.frustumCulled = false; scene.add(m); }
+    this.chestMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb020).multiplyScalar(1.3) }), 64); this.chestMesh.count = 0;
+    for (const m of [this.projMesh, this.gemMesh, this.chestMesh]) { m.frustumCulled = false; scene.add(m); }
   }
   update(s: SimState, trailTick: number) {
     let n = 0;
@@ -44,8 +45,9 @@ export class ProjectileRenderer {
     this.projMesh.count = n; this.projMesh.instanceMatrix.needsUpdate = true;
     this.trailMesh.count = tn; this.trailMesh.instanceMatrix.needsUpdate = true; this.trailMesh.instanceColor!.needsUpdate = true;
     this.lavaMesh.count = ln; this.lavaMesh.instanceMatrix.needsUpdate = true; if (this.lavaMesh.instanceColor) this.lavaMesh.instanceColor.needsUpdate = true;
-    n = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
+    n = 0; let cn = 0; const pk = s.pickups; for (let i = 0; i < pk.count; i++) { if (!pk.alive[i]) continue;
+      if (pk.kind[i] === 1) { this.m.position.set(pk.x[i], 0.55 + Math.sin(s.time * 3) * 0.12, pk.z[i]); this.m.rotation.set(0, s.time * 1.5, 0); this.m.scale.setScalar(1.6); this.m.updateMatrix(); if (cn < 64) this.chestMesh.setMatrixAt(cn++, this.m.matrix); this.m.scale.setScalar(1); continue; }
       this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); if (pk.magnet[i] && (trailTick & 1)) this.vfx.trail(pk.x[i], 0.45, pk.z[i]); }
-    this.gemMesh.count = n; this.gemMesh.instanceMatrix.needsUpdate = true;
+    this.gemMesh.count = n; this.gemMesh.instanceMatrix.needsUpdate = true; this.chestMesh.count = cn; this.chestMesh.instanceMatrix.needsUpdate = true;
   }
 }

@@ -8,13 +8,13 @@ const lastHit = new Int16Array(MAX_PROJECTILES).fill(-1);
 export const resetHit = (i: number) => { lastHit[i] = -1; };
 const PR = 0.3;
 
-export function spawnGem(s: import('@shared/types').SimState, x: number, z: number, value: number) {
+export function spawnGem(s: import('@shared/types').SimState, x: number, z: number, value: number, kind = 0) {
   const pk = s.pickups, j = alloc(pk.alive, pk.count, MAX_PICKUPS); if (j < 0) return;
-  pk.alive[j] = 1; pk.kind[j] = 0; pk.x[j] = x; pk.z[j] = z; pk.value[j] = value; pk.magnet[j] = 0; if (j >= pk.count) pk.count = j + 1;
+  pk.alive[j] = 1; pk.kind[j] = kind; pk.x[j] = x; pk.z[j] = z; pk.value[j] = value; pk.magnet[j] = 0; if (j >= pk.count) pk.count = j + 1;
 }
 
 export function killEnemy(s: import('@shared/types').SimState, j: number) {
-  const e = s.enemies, def = enemyDef(e.kind[j]); e.alive[j] = 0; s.kills++; spawnGem(s, e.x[j], e.z[j], def.xp);
+  const e = s.enemies, def = enemyDef(e.kind[j]); e.alive[j] = 0; s.kills++; if (e.flags[j] & 1) { spawnGem(s, e.x[j], e.z[j], 0, 1); e.flags[j] = 0; } else spawnGem(s, e.x[j], e.z[j], def.xp);
   s.events.push({ t: 'kill', x: e.x[j], z: e.z[j], enemyKind: e.kind[j] });
 }
 export const projectileSystem: System = { name: 'projectiles', update(s, c) {

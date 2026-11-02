@@ -20,7 +20,7 @@ export const enemySystem: System = { name: 'enemies', update(s, c) {
     e.vx[i] = dx / d * def.speed + sx * 3; e.vz[i] = dz / d * def.speed + sz * 3;
     e.x[i] += e.vx[i] * c.dt; e.z[i] += e.vz[i] * c.dt; e.facing[i] = Math.atan2(dx, dz);
     if (!tgt.dead && d < def.radius + 0.4 && tgt.iframes <= 0) {
-      const dmg = Math.max(1, def.dmg - (tgt.stats.armor ?? 0)); tgt.hp -= dmg; tgt.iframes = 0.5; s.events.push({ t: 'playerHurt', id: tgt.id, dmg }, { t: 'freeze', ms: 50 });
+      const dmg = Math.max(1, def.dmg * (e.flags[i] & 1 ? 1.5 : 1) - (tgt.stats.armor ?? 0)); tgt.hp -= dmg; tgt.iframes = 0.5; s.events.push({ t: 'playerHurt', id: tgt.id, dmg }, { t: 'freeze', ms: 50 });
       if (tgt.hp <= 0) { tgt.dead = true; tgt.hp = 0; }
     }
   }

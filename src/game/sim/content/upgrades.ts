@@ -18,17 +18,35 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'p:luck', name: 'Fortune', desc: '+5% crit chance' },
   { id: 'p:hp', name: 'Vitality', desc: '+25 max HP and heal 25' },
 ];
-export const upgradeDef = (id: string) => UPGRADES.find(u => u.id === id)!;
+/** Evolutions: weapon at MAX level + its paired passive owned => 'e:<weapon>' card. Effect: +4 virtual levels (more bolts/blades, damage, speed) and evolved flag. */
+export const EVOLUTIONS: Record<string, { name: string; passive: string; has: (p: PlayerState) => boolean }> = {
+  ember_bolt: { name: 'Solar Lance', passive: 'Might', has: p => p.stats.damageMult > 1.001 },
+  orbit_blades: { name: 'Thousand Blades', passive: 'Reach', has: p => p.stats.area > 1.001 },
+  frost_nova: { name: 'Absolute Zero', passive: 'Haste', has: p => p.stats.cooldownMult < 0.999 },
+  chain_lightning: { name: 'Storm Crown', passive: 'Fortune', has: p => (p.stats.luck ?? 0) > 0 },
+  lava_trail: { name: 'Magma Wake', passive: 'Armor', has: p => (p.stats.armor ?? 0) > 0 },
+  seeker_spears: { name: 'Hunter Choir', passive: 'Swiftness', has: p => p.stats.moveSpeed > 6.01 },
+};
+export const EVOLVE_LEVELS = 4;
+export const upgradeDef = (id: string): UpgradeDef => {
+  if (id.startsWith('e:')) { const w = id.slice(2), e = EVOLUTIONS[w]; return { id, name: `EVOLVE: ${e.name}`, desc: `${UPGRADES.find(u => u.id === 'w:' + w)!.name} supercharged (+${EVOLVE_LEVELS} levels)` }; }
+  return UPGRADES.find(u => u.id === id)!;
+};
+function evolutions(p: PlayerState): string[] {
+  return p.weapons.filter(w => !w.evolved && w.level >= MAX_WEAPON_LEVEL && EVOLUTIONS[w.id]?.has(p)).map(w => 'e:' + w.id);
+}
 function available(p: PlayerState): UpgradeDef[] {
   return UPGRADES.filter(u => !u.id.startsWith('w:') || (p.weapons.find(w => 'w:' + w.id === u.id)?.level ?? 0) < MAX_WEAPON_LEVEL);
 }
 /** Pick `n` distinct choices deterministically. */
 export function rollChoices(p: PlayerState, rng: Rng, n = 3): string[] {
-  const pool = available(p).map(u => u.id), out: string[] = [];
+  const out: string[] = evolutions(p).slice(0, 1); // an available evolution always leads the offer
+  const pool = available(p).map(u => u.id);
   while (out.length < n && pool.length) out.push(pool.splice(rng.int(pool.length), 1)[0]);
   return out;
 }
 export function applyUpgrade(p: PlayerState, id: string) {
+  if (id.startsWith('e:')) { const w = p.weapons.find(w => 'e:' + w.id === id); if (w) { w.evolved = true; w.level += EVOLVE_LEVELS; } return; }
   if (id.startsWith('w:')) { const w = p.weapons.find(w => 'w:' + w.id === id); if (w) w.level++; else p.weapons.push({ id: id.slice(2), level: 1, cooldown: 0 }); return; }
   const st = p.stats;
   switch (id) {

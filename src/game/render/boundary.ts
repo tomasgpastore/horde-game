@@ -20,5 +20,5 @@ export function buildBoundary(scene: THREE.Scene, def: ArenaDef): void {
     o.position.set(Math.cos(a) * r, -0.5, Math.sin(a) * r); o.rotation.set((h(i + 5) - 0.5) * 0.4, h(i + 13) * 6.28, (h(i + 17) - 0.5) * 0.4); o.scale.set(w, ht, w); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
     c.copy(dark).lerp(new THREE.Color(def.palette.ground), 0.35 + h(i + 3) * 0.3); im.setColorAt(i, c);
   }
-  im.frustumCulled = false; scene.add(im);
+  im.frustumCulled = false; im.userData.noHeightCap = true; scene.add(im); // tall on purpose; still fades when it would hide the hero
 }
