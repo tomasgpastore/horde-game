@@ -1,7 +1,7 @@
 import { TICK_DT, PlayerInput } from '@shared/types';
 import { Sim, createState } from '@sim/index';
 import { Renderer } from '@render/renderer';
-import { KeyboardMouse } from './input';
+import { KeyboardMouse, Gamepad } from './input';
 import { getArena } from '@world/index';
 import { mountHud } from '@ui/hud';
 import { Audio, audio } from '@audio/index';
@@ -9,7 +9,7 @@ import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
 export class Game {
-  sim!: Sim; renderer: Renderer; input: KeyboardMouse; acc = 0; last = performance.now(); hud; audio = new Audio();
+  sim!: Sim; renderer: Renderer; input: KeyboardMouse; pad = new Gamepad(); acc = 0; last = performance.now(); hud; audio = new Audio();
   fps = 0; private frames = 0; private fpsT = 0; running = false; paused = false; raf = 0;
   canvas = document.createElement('canvas'); ui = document.createElement('div'); mode: 'solo' | 'coop' = 'solo';
   constructor(parent: HTMLElement, private shellInput: ShellInput, public settings: Settings) {
@@ -32,9 +32,7 @@ export class Game {
   applySettings(s: Settings) {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
-    const r = (this.renderer as any)?.three; if (r) r.setPixelRatio(Math.min(devicePixelRatio, s.quality === 'low' ? 1 : s.quality === 'high' ? 2 : 1.5));
-    dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
-    // TODO Engine: screenshake honours s.shake
+    this.renderer?.applySettings(s);
   }
   /** Aim at the nearest live enemy (touch/gamepad); fall back to move direction, then keep previous aim. */
   autoAim(me: { x: number; z: number }, inp: PlayerInput) {
@@ -62,14 +60,18 @@ export class Game {
     const me = this.sim.state.players[0];
     if (this.autoplay) { me.iframes = 9999; if (this.sim.state.phase === 'levelUp') this.choose(this.sim.state.tick % 3); }
     if (this.running && !this.paused) {
-      this.acc += dt;
+      const r = this.renderer;
+      if (r.hitstop > 0) r.hitstop -= dt; // hitstop: skip stepping; sim stays fixed-step
+      else this.acc += dt * (r.slowmo > 0 ? 0.3 : 1);
+      if (r.slowmo > 0) r.slowmo -= dt;
       const inp: PlayerInput = this.autoplay ? this.bot(me) : this.input.poll(me, this.renderer.camera);
       const si = this.shellInput, m = si.move; if (!this.autoplay && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; } // touch stick or gamepad (shell)
       if (si.dash) { inp.dash = true; si.dash = false; }
       if (si.touch || m.x || m.y) this.autoAim(me, inp); // no mouse on touch/gamepad: aim at nearest enemy
+      if (!this.autoplay) Object.assign(inp, this.pad.poll(inp)); // physical gamepad: right stick aim, buttons
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
-        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events);
+        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events, this.sim.state);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
     }
