@@ -13,9 +13,14 @@ export function spawnGem(s: import('@shared/types').SimState, x: number, z: numb
   pk.alive[j] = 1; pk.kind[j] = 0; pk.x[j] = x; pk.z[j] = z; pk.value[j] = value; pk.magnet[j] = 0; if (j >= pk.count) pk.count = j + 1;
 }
 
+export function killEnemy(s: import('@shared/types').SimState, j: number) {
+  const e = s.enemies, def = enemyDef(e.kind[j]); e.alive[j] = 0; s.kills++; spawnGem(s, e.x[j], e.z[j], def.xp);
+  s.events.push({ t: 'kill', x: e.x[j], z: e.z[j], enemyKind: e.kind[j] });
+}
 export const projectileSystem: System = { name: 'projectiles', update(s, c) {
   const pr = s.projectiles, e = s.enemies;
   for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
+    if (pr.kind[i] !== 0) { if (pr.kind[i] !== 1) { pr.life[i] -= c.dt; if (pr.life[i] <= 0) pr.alive[i] = 0; } continue; } // non-bolt kinds are driven by weapons.ts
     pr.x[i] += pr.vx[i] * c.dt; pr.z[i] += pr.vz[i] * c.dt; pr.life[i] -= c.dt;
     if (pr.life[i] <= 0) { pr.alive[i] = 0; continue; }
     const gx = cellX(pr.x[i]), gz = cellX(pr.z[i]);
@@ -29,7 +34,7 @@ export const projectileSystem: System = { name: 'projectiles', update(s, c) {
         const crit = c.rng.next() < 0.1, dmg = pr.dmg[i] * (crit ? 2 : 1);
         e.hp[j] -= dmg; e.hitFlash[j] = 0.1; lastHit[i] = j;
         s.events.push({ t: 'hit', x: e.x[j], z: e.z[j], dmg, crit, enemyKind: e.kind[j] });
-        if (e.hp[j] <= 0) { e.alive[j] = 0; s.kills++; spawnGem(s, e.x[j], e.z[j], def.xp); s.events.push({ t: 'kill', x: e.x[j], z: e.z[j], enemyKind: e.kind[j] }); }
+        if (e.hp[j] <= 0) killEnemy(s, j);
         if (pr.pierce[i] > 0) pr.pierce[i]--; else { pr.alive[i] = 0; dead = true; break; }
       }
     }
