@@ -1,6 +1,7 @@
 import type { SimState } from '@shared/types';
 import { BOSSES } from '@sim/content/enemies';
 import { upgradeDef } from '@sim/content/upgrades';
+import { iconSvg } from '../art/icons';
 /** HUD + level-up cards. DOM overlay inside the game's own ui div. Gameplay/UI owner extends (lantern style, Rajdhani). */
 export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
   const css = document.createElement('style');
@@ -32,7 +33,7 @@ export function mountHud(root: HTMLElement, onChoose: (i: number) => void) {
       if (!key) cards.style.display = 'none';
       else { cards.style.display = 'flex'; cards.innerHTML = '<h2>LEVEL UP</h2>'; s.levelChoices.forEach((id, i) => {
         const u = upgradeDef(id), w = p.weapons.find(w => 'w:' + w.id === id), c = document.createElement('div'); c.className = 'card';
-        c.innerHTML = `<h3>${u.name}</h3><p>${u.desc}</p><br><small>${w ? 'Lv ' + w.level + ' → ' + (w.level + 1) : 'Press ' + (i + 1)}</small>`;
+        c.innerHTML = `<div style="filter:drop-shadow(0 0 10px #0008);margin-bottom:6px">${iconSvg(id)}</div><h3>${u.name}</h3><p>${u.desc}</p><br><small>${w ? 'Lv ' + w.level + ' → ' + (w.level + 1) : 'Press ' + (i + 1)}</small>`;
         c.onclick = () => pick(i); cards.appendChild(c); }); }
     }
   } };

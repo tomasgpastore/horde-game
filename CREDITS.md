@@ -11,6 +11,7 @@
 | Tool | sharp, @gltf-transform/*, meshoptimizer | Lovell Fuller / Don McCurdy / Arseny Kapoulkine | Apache-2.0 / MIT / MIT | https://github.com/lovell/sharp | Asset pipeline (`npm run assets`), build-time only | Web |
 | Tool | ffmpeg-static (ffmpeg binary) | Eugene Sharygin / FFmpeg team | GPL-3.0 binary, used build-time only, not shipped | https://github.com/eugeneware/ffmpeg-static | Audio transcode in `npm run assets` (only if raw audio is added) | Web |
 | Tool | Playwright | Microsoft | Apache-2.0 | https://github.com/microsoft/playwright | Tests, screenshots, footage capture | QA |
+| Art | Upgrade/weapon icons (inline SVG) | Artist | Original (studio) | src/game/art/icons.ts | Level-up cards | Artist |
 | *(add rows)* | | | | | | |
 
 ## CC-BY attribution text (shown in-game Credits screen)
