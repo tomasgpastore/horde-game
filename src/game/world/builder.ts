@@ -126,13 +126,13 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
   }
   // rim wall: tall jagged rocks just outside the playable edge
   const rimN = Math.round(R * 2.6);
-  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.8, 4) * (1 - 0.4 * Math.max(0, Math.sin(a)));
-    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : s * rng.range(1.5, 3.2))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
+  for (let i = 0; i < rimN; i++) { const a = i / rimN * 6.2832 + rng.range(-0.03, 0.03), d = R + 0.6 + rng.range(0, 2.5) + 2.5 * Math.max(0, Math.sin(a)), s = rng.range(1.4, 3) * (1 - 0.4 * Math.max(0, Math.sin(a)));
+    push('rock', Math.cos(a) * d, Math.sin(a) * d, s, (sn => sn > 0 ? Math.min(s * rng.range(1.5, 3.2) * (1 - 0.7 * sn), 1.2 + 2.6 * (1 - sn)) : Math.min(s * rng.range(1.5, 3.2), 4.5))(Math.sin(a)) /* camera sits at +z: keep the near-side wall low so it never hides the hero */, rng.range(0, 6.28), rng.pick(b.propColors), -0.2); }
   const glowMats: THREE.MeshLambertMaterial[] = []; let shards: THREE.InstancedMesh | undefined, edge: THREE.MeshBasicMaterial | undefined;
   for (const [k, lst] of buckets) {
     const g = geo[k](), emissive = EMISSIVE.includes(k);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? 0.9 : 0 });
-    if (emissive) glowMats.push(mat);
+    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, emissive: emissive ? b.glowColor : 0x000000, emissiveIntensity: emissive ? (k === 'brazier' ? 0.3 : 0.9) : 0 }); // brazier at 0.9 read as a flat salmon blob with a handle under bloom
+    if (emissive) { mat.userData.k = k === 'brazier' ? 0.3 : 1; glowMats.push(mat); }
     const im = new THREE.InstancedMesh(g, mat, lst.length); lst.forEach((l, i) => { im.setMatrixAt(i, l.m); im.setColorAt(i, l.c); });
     if (k === 'shard') shards = im; im.castShadow = k !== 'bone' && k !== 'shard'; im.receiveShadow = true; im.frustumCulled = false; add(im); disposables.push(g, mat, im);
   }
@@ -170,7 +170,7 @@ export function buildArena(def: ArenaDef, b: Biome, scene: THREE.Scene): ArenaHa
         let y = ep[i * 3 + 1] + E.rise * sp * dt; if (y > 14) y -= 14;
         ep[i * 3 + 1] = y; ep[i * 3] += Math.sin(t * 0.7 + ph) * 0.6 * dt; ep[i * 3 + 2] += Math.cos(t * 0.6 + ph) * 0.6 * dt; }
       a.needsUpdate = true;
-      const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse;
+      const pulse = 0.75 + Math.sin(t * 3) * 0.2 + Math.sin(t * 7.3) * 0.05; for (const m of glowMats) m.emissiveIntensity = pulse * m.userData.k;
       if (edge) edge.opacity = 0.35 + Math.sin(t * 1.5) * 0.12;
       if (shards) shards.position.y = Math.sin(t * 0.8) * 0.35;
       if (mist && mp) { const ma = mist.geometry.attributes.position as THREE.BufferAttribute;
