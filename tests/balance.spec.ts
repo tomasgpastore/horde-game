@@ -15,5 +15,7 @@ test('balance: bot survival over 10 seeds', async ({ page }) => {
       return { seed, died: s.phase === 'gameOver', t: +s.time.toFixed(0), kills: s.kills, lvl: p.level, boss, hpAt90: t90hp }; }, seed));
   }
   const ts = runs.map(r => r.t).sort((a, b) => a - b), med = ts[Math.floor(ts.length / 2)];
+  const hist: Record<string, number> = {}; for (const r of runs) { const b = r.died ? `${Math.floor(r.t / 60)}:00-${Math.floor(r.t / 60)}:59` : 'survived 10:00'; hist[b] = (hist[b] ?? 0) + 1; }
+  console.log('HIST ' + JSON.stringify(hist));
   console.log('BALANCE ' + JSON.stringify({ median_survival_s: med, survived90: runs.filter(r => r.t >= 90).length, reached300: runs.filter(r => r.t >= 300).length, bossSeen: runs.filter(r => r.boss).length, runs }));
 });
