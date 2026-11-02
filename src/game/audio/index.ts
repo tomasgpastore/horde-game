@@ -48,6 +48,7 @@ export class Audio {
         case 'playerHurt': sfx.play('hurt'); break;
         case 'pickup': sfx.play('gem'); break;
         case 'levelUp': sfx.play('levelup'); if (!state) this.setCards(true); break;
+        case 'evolve': sfx.play('levelup', { volume: 1, pitch: 1.5 }); break;
         case 'dash': sfx.play('dash'); break;
         case 'waveStart': sfx.play('boss_roar', { volume: 0.25, pitch: 1.5 }); break;
         case 'bossSpawn': sfx.play('boss_telegraph'); music.duck(-6, 0.6); sfx.play('boss_roar'); this.setBossFight(true); break;
