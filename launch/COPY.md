@@ -29,10 +29,12 @@ EMBERHORDE is a fast, 3D low-poly roguelite where you survive wave after wave of
 - **Escalating chaos** – dozens become hundreds on screen; bosses test your build.
 - **Short, replayable runs** – one more try, always.
 - **Low-poly style** – readable, colourful, smooth.
-- [FILL: confirm actual features — heroes, weapons, biomes, meta-progression, controls, mobile]
+- **Six weapons** – Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears – plus passives (Might, Haste, Swiftness, Magnet, Armor, Reach, Fortune, Vitality).
+- **Three biomes, three bosses** – Ashen Woods, Drowned Cathedral, Void Garden; the Hollow Stag, Bell-Warden and The Unlit.
+- **Plays everywhere** – keyboard + mouse, gamepad, or touch controls on mobile.
 
 ## Controls (confirm with Gameplay Engineer)
-WASD / arrows to move · mouse/auto-aim [confirm] · Esc pause · touch joystick on mobile [confirm]
+WASD / arrows to move · mouse to aim (auto-aim on touch/gamepad) · Space to dash · E ability · Esc or P to pause · gamepad: left stick move, right stick aim, A/RB dash · touch joystick + dash button on mobile
 
 ## OG / meta tags (for @web-engineer)
 ```html
