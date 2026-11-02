@@ -6,14 +6,14 @@ import type { SimState } from '@shared/types';
 import { waveFor, waveAt, WAVE_SECONDS, ARENA_BOSS } from '@world/waves';
 /** World-owned: wave pacing, off-screen spawn ring, ring surges, boss events. Deterministic (ctx.rng only).
  *  Enemy base stats come from Gameplay; here we only set position/kind/hp placeholder via `spawnHp`. */
-export const SPAWN_DIST = 24;
+export const SPAWN_DIST = 17;
 
 export const spawnHp = (kind: number, wave: number) => enemyDef(kind).hp * (1 + wave * 0.12);
 
 function spawnOne(s: SimState, kind: number, x: number, z: number): boolean {
   const e = s.enemies, i = alloc(e.alive, e.count, MAX_ENEMIES);
   if (i < 0) return false;
-  e.alive[i] = 1; e.kind[i] = kind; e.flags[i] = 0; e.x[i] = x; e.z[i] = z; e.vx[i] = 0; e.vz[i] = 0;
+  e.alive[i] = 1; e.kind[i] = kind; e.x[i] = x; e.z[i] = z; e.vx[i] = 0; e.vz[i] = 0;
   e.hp[i] = spawnHp(kind, s.wave); e.hitFlash[i] = 0; e.facing[i] = 0;
   if (i >= e.count) e.count = i + 1;
   return true;
