@@ -13,6 +13,7 @@ export interface PlayerInput {
   moveX: number; moveZ: number;   // -1..1, normalised by sim
   aimX: number; aimZ: number;     // world-space aim direction (unit or 0)
   dash: boolean; ability: boolean; // edge-triggered by InputSource each tick
+  pick?: number;                  // level-up card index (0..2), edge-triggered; only read while phase==='levelUp'
 }
 export const EMPTY_INPUT: PlayerInput = { moveX: 0, moveZ: 0, aimX: 0, aimZ: 1, dash: false, ability: false };
 
@@ -24,11 +25,16 @@ export interface EnemyPool {
   x: Float32Array; z: Float32Array; vx: Float32Array; vz: Float32Array;
   hp: Float32Array; hitFlash: Float32Array; // seconds remaining of hit flash
   facing: Float32Array;     // yaw radians
+  slow: Float32Array;       // seconds of slow remaining
+  aux: Float32Array;        // AI scratch (e.g. spitter shot timer)
+  elite: Uint8Array;        // 1 = elite (crown, 3x hp, drops chest)
 }
 export interface ProjectilePool {
   count: number; alive: Uint8Array; kind: Uint8Array; owner: Uint8Array;
   x: Float32Array; z: Float32Array; vx: Float32Array; vz: Float32Array;
   life: Float32Array; dmg: Float32Array; pierce: Uint8Array;
+  aux: Float32Array;        // collision radius
+  hits: Int32Array; hitN: Uint8Array; // ring of 4 recent enemy ids hit per projectile (pierce dedupe)
 }
 export interface PickupPool {
   count: number; alive: Uint8Array; kind: Uint8Array; // 0 xp gem,1 gold,2 health, ...
@@ -42,17 +48,22 @@ export interface PlayerState {
   weapons: { id: string; level: number; cooldown: number }[];
   stats: Record<string, number>; // moveSpeed, damageMult, area, pickupRadius...
   dead: boolean;
+  choices: string[]; // pending level-up card ids (empty = none). Content: describeChoice()
 }
 
 /** One-shot things the sim emits each tick for render/audio/ui (particles, sfx, damage numbers). Cleared every tick. */
 export type SimEvent =
   | { t: 'hit'; x: number; z: number; dmg: number; crit: boolean; enemyKind: number }
-  | { t: 'kill'; x: number; z: number; enemyKind: number }
+  | { t: 'kill'; x: number; z: number; enemyKind: number; elite?: boolean }
   | { t: 'shoot'; weapon: string; x: number; z: number; owner: number }
   | { t: 'playerHurt'; id: number; dmg: number }
   | { t: 'pickup'; kind: number; id: number }
   | { t: 'levelUp'; id: number; choices: string[] }
   | { t: 'dash'; id: number }
+  | { t: 'arc'; x1: number; z1: number; x2: number; z2: number }               // chain lightning segment
+  | { t: 'nova'; x: number; z: number; r: number; style: 'frost' | 'toxic' }   // expanding ring
+  | { t: 'telegraph'; x: number; z: number; dx: number; dz: number; dur: number } // enemy about to shoot
+  | { t: 'chest'; x: number; z: number }
   | { t: 'waveStart'; wave: number }
   | { t: 'bossSpawn'; x: number; z: number; bossId: string }
   | { t: 'gameOver'; victory: boolean };

@@ -9,14 +9,14 @@ import type { Settings, ShellInput } from './createGame';
 
 /** Fixed-timestep loop (60Hz sim). Owns canvas + HUD overlay inside canvasParent. Never touches #shell. */
 export class Game {
-  sim!: Sim; renderer: Renderer; input: KeyboardMouse; acc = 0; last = performance.now(); hud; audio = new Audio();
+  sim!: Sim; renderer: Renderer; input: KeyboardMouse; acc = 0; last = performance.now(); hud; pendingPick = -1; audio = new Audio();
   fps = 0; private frames = 0; private fpsT = 0; running = false; paused = false; raf = 0;
   canvas = document.createElement('canvas'); ui = document.createElement('div'); mode: 'solo' | 'coop' = 'solo';
   constructor(parent: HTMLElement, private shellInput: ShellInput, public settings: Settings) {
     this.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%'; this.ui.style.cssText = 'position:absolute;inset:0;pointer-events:none;color:#fff';
     parent.append(this.canvas, this.ui);
     this.input = new KeyboardMouse(this.canvas);
-    this.reset(); this.renderer = new Renderer(this.canvas, getArena('ashen_basin')); this.hud = mountHud(this.ui);
+    this.reset(); this.renderer = new Renderer(this.canvas, getArena('ashen_basin')); this.hud = mountHud(this.ui, i => { this.pendingPick = i; });
     (window as any).__game = this; // QA hook
     this.raf = requestAnimationFrame(this.frame); // renders idle scene behind menu
   }
@@ -36,9 +36,10 @@ export class Game {
     if (this.running && !this.paused) {
       this.acc += dt;
       const inp: PlayerInput = this.input.poll(me, this.renderer.camera);
+      inp.pick = this.pendingPick; this.pendingPick = -1;
       const m = this.shellInput.move; if (this.shellInput.touch && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; }
       while (this.acc >= TICK_DT) {
-        this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
+        this.sim.step([inp]); inp.dash = inp.ability = false; inp.pick = -1; this.acc -= TICK_DT;
         this.audio.consume(this.sim.state.events); this.renderer.consumeEvents(this.sim.state.events);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
