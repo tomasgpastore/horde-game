@@ -55,6 +55,7 @@ export type SimEvent =
   | { t: 'dash'; id: number }
   | { t: 'waveStart'; wave: number }
   | { t: 'bossSpawn'; x: number; z: number; bossId: string }
+  | { t: 'bossDeath'; x: number; z: number; bossId: string }
   | { t: 'gameOver'; victory: boolean };
 
 export interface SimState {
