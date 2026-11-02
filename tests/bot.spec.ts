@@ -11,5 +11,5 @@ test('bot stays central; screenshots at 0:40 and 2:00', async ({ page }) => {
     await page.screenshot({ path: `/tmp/bot_${target}.png` });
     await page.evaluate(() => { const g = (window as any).__game; g.paused = true; g.running = true; });
   }
-  expect(maxR).toBeLessThan(26);
+  expect(maxR).toBeLessThan(24);
 });

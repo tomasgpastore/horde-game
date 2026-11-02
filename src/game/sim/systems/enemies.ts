@@ -1,6 +1,7 @@
 import type { System } from '../system';
 import { enemyDef } from '../content/enemies';
 import { head, next, cellX, DIM } from './grid';
+import { SPITTER, HOLD, spitTele } from './spitters';
 /** Chase nearest living player, light separation via grid, contact damage with i-frames, death → gameOver. */
 export const enemySystem: System = { name: 'enemies', update(s, c) {
   const e = s.enemies;
@@ -17,7 +18,8 @@ export const enemySystem: System = { name: 'enemies', update(s, c) {
         const ax = e.x[i] - e.x[j], az = e.z[i] - e.z[j], r = def.radius + enemyDef(e.kind[j]).radius, d2 = ax * ax + az * az;
         if (d2 < r * r && d2 > 1e-6) { const dd = Math.sqrt(d2), f = (r - dd) / r; sx += ax / dd * f; sz += az / dd * f; } }
     }
-    e.vx[i] = dx / d * def.speed + sx * 3; e.vz[i] = dz / d * def.speed + sz * 3;
+    const sp = e.kind[i] === SPITTER ? (spitTele[i] > 0 || d < HOLD ? 0 : def.speed) : def.speed; // spitters hold position at range and while winding up
+    e.vx[i] = dx / d * sp + sx * 3; e.vz[i] = dz / d * sp + sz * 3;
     e.x[i] += e.vx[i] * c.dt; e.z[i] += e.vz[i] * c.dt; e.facing[i] = Math.atan2(dx, dz);
     if (!tgt.dead && d < def.radius + 0.4 && tgt.iframes <= 0) {
       const dmg = Math.max(1, def.dmg * (e.flags[i] & 1 ? 1.5 : 1) - (tgt.stats.armor ?? 0)); tgt.hp -= dmg; tgt.iframes = 0.6; s.events.push({ t: 'playerHurt', id: tgt.id, dmg }, { t: 'freeze', ms: 50 });

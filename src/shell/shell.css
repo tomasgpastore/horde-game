@@ -94,3 +94,5 @@ body.in-menu #game>div{display:none!important} /* game HUD overlay (#game's ui d
 @media (prefers-reduced-motion:reduce){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}
 .screen:has(.results) .results{position:relative;z-index:1}
 @media (pointer:coarse){.screen:has(.results)::before,.screen:has(.results)::after{animation:none}}
+/* pause over the level-up/reward cards: dim + blur so card text doesn't bleed through the pause buttons */
+.screen.clear:has(.btn.primary[data-a=resume]){background:rgba(10,9,16,.82);backdrop-filter:blur(4px)}
