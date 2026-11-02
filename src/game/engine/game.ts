@@ -43,7 +43,7 @@ export class Game {
     if (best >= 0) { const l = Math.sqrt(bd) || 1; inp.aimX = (e.x[best] - me.x) / l; inp.aimZ = (e.z[best] - me.z) / l; }
     else if (inp.moveX || inp.moveZ) { const l = Math.hypot(inp.moveX, inp.moveZ); inp.aimX = inp.moveX / l; inp.aimZ = inp.moveZ / l; }
   }
-  gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, time: s.time, victory } })); }
+  gameOver(victory: boolean) { this.running = false; const s = this.sim.state; dispatchEvent(new CustomEvent('game:over', { detail: { score: s.kills, kills: s.kills, time: s.time, victory, level: s.players[0].level, weapons: s.players[0].weapons.map(w => ({ id: w.id, level: w.level })) } })); }
   /** ?autoplay=1 debug bot (trailer capture): kites away from the horde's centre of mass; invulnerable; auto-picks cards. */
   autoplay = new URLSearchParams(location.search).get('autoplay') === '1'; private botT = 0;
   bot(me: { x: number; z: number }): PlayerInput {
@@ -72,7 +72,7 @@ export class Game {
       if (this.hitstop > 0) { this.hitstop -= dt; this.acc = 0; }
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
-        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); for (const ev of this.sim.state.events) if (ev.t === 'playerHurt') this.hitstop = 0.05; else if (ev.t === 'bossDeath') this.hitstop = 0.12;
+        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); for (const ev of this.sim.state.events) if (ev.t === 'freeze') this.hitstop = Math.max(this.hitstop, ev.ms / 1000); else if (ev.t === 'slow') this.renderer.slowmo = Math.max(this.renderer.slowmo, ev.secs);
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
     }
