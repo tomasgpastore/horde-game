@@ -23,7 +23,7 @@ import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
 export class Renderer {
   three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
   proj!: ProjectileRenderer; bossView!: BossView; enemies!: EnemyRenderer; dmg!: DamageNumbers; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
-  rig = new CameraRig(this.camera); private sun: THREE.DirectionalLight | null = null; private sunOff = new THREE.Vector3(); private noDegrade = new URLSearchParams(location.search).has('nodegrade'); private slowT = 0; private slowN = 0; private q: 'low' | 'med' | 'high' = 'high';
+  fx = 1; rig = new CameraRig(this.camera); private sun: THREE.DirectionalLight | null = null; private sunOff = new THREE.Vector3(); private noDegrade = new URLSearchParams(location.search).has('nodegrade'); private slowT = 0; private slowN = 0; private q: 'low' | 'med' | 'high' = 'high';
   /** Game.frame reads/decrements this: seconds of slow-mo (sim runs at 0.3x). */ slowmo = 0;
   setShake(v: boolean | number) { this.rig.shakeScale = v === false ? 0 : v === true ? 1 : Number(v); }
   composer: EffectComposer; bloomOn = new URLSearchParams(location.search).get('bloom') !== '0'; // ?bloom=0 for software-GL CI shake = 0;
@@ -42,7 +42,7 @@ export class Renderer {
     if (sun) { this.sunOff.copy(sun.position); this.scene.add(sun.target); const sc = sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24; sc.updateProjectionMatrix(); sun.shadow.mapSize.set(2048, 2048); sun.shadow.normalBias = 0.04; }
     this.occ = new OccluderFader(this.scene, fresh); this.rig.snap();
   }
-  setQuality(q: 'low' | 'med' | 'high') { this.q = q; limits.maxAlive = q === 'low' ? 200 : MAX_ALIVE; /* auto-degrade also lowers the enemy cap (final cap = min(tuned cap, quality cap)) */ this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
+  setQuality(q: 'low' | 'med' | 'high') { this.q = q; this.fx = q === 'low' ? 0.5 : 1; /* low: half particles, crit-only damage numbers */ limits.maxAlive = q === 'low' ? 200 : MAX_ALIVE; /* auto-degrade also lowers the enemy cap (final cap = min(tuned cap, quality cap)) */ this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0';
     const pr = Math.min(devicePixelRatio, q === 'low' ? 1.25 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight);
     const sh = q !== 'low'; if (this.three.shadowMap.enabled !== sh) { this.three.shadowMap.enabled = sh; this.scene.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (m) [m].flat().forEach(x => x.needsUpdate = true); }); } }
   disposeBoundary: () => void = () => {}; arenaId = ''; occ!: OccluderFader; vfx!: Vfx; trailTick = 0; playerMesh: THREE.Group; lantern!: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
@@ -69,7 +69,7 @@ export class Renderer {
     addEventListener('resize', onResize); onResize();
   }
   private burst(x: number, z: number, n: number, col: number, spd: number) {
-    for (let k = 0; k < n; k++) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; const a = Math.random() * 6.283, v = spd * (0.4 + Math.random());
+    for (let k = 0, nn = Math.ceil(n * this.fx); k < nn; k++) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; const a = Math.random() * 6.283, v = spd * (0.4 + Math.random());
       this.px[i * 3] = x; this.px[i * 3 + 1] = 0.6; this.px[i * 3 + 2] = z; this.pv[i * 3] = Math.cos(a) * v; this.pv[i * 3 + 1] = 2 + Math.random() * 4; this.pv[i * 3 + 2] = Math.sin(a) * v; this.pl[i] = 0.5 + Math.random() * 0.4; this.pcol[i] = col; }
   }
   pcol = new Uint32Array(Renderer.NP); trailT = 0;
@@ -79,7 +79,7 @@ export class Renderer {
     for (const e of ev) {
       if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
       else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
-      else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); this.dmg.add(e.x, e.z, e.dmg, e.crit); }
+      else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); if (this.fx === 1 || e.crit) this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'telegraph') this.vfx.ring(e.x, e.z, 0xff3a3a, 2.4, 0.6);
       else if (e.t === 'playerHurt') this.rig.addTrauma(0.6);
       else if (e.t === 'bossTelegraph') this.vfx.telegraph(this.scene, e.x, e.z, e.dx, e.dz, e.windup, BOSS_COLORS[e.bossId as keyof typeof BOSS_COLORS] ?? 0xff3355);
