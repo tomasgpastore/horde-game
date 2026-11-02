@@ -56,6 +56,7 @@ export class Game {
     let mx = sx + Math.cos(a) * 0.02 - me.x * 0.0008, mz = sz + Math.sin(a) * 0.02 - me.z * 0.0008; const l = Math.hypot(mx, mz) || 1;
     return { moveX: mx / l, moveZ: mz / l, aimX: 0, aimZ: 1, dash: false, ability: false };
   }
+  hitstop = 0;
   frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
     const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now;
@@ -67,9 +68,10 @@ export class Game {
       const si = this.shellInput, m = si.move; if (!this.autoplay && (m.x || m.y)) { inp.moveX = m.x; inp.moveZ = m.y; } // touch stick or gamepad (shell)
       if (si.dash) { inp.dash = true; si.dash = false; }
       if (si.touch || m.x || m.y) this.autoAim(me, inp); // no mouse on touch/gamepad: aim at nearest enemy
+      if (this.hitstop > 0) { this.hitstop -= dt; this.acc = 0; }
       while (this.acc >= TICK_DT) {
         this.sim.step([inp]); inp.dash = inp.ability = false; this.acc -= TICK_DT;
-        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events);
+        this.audio.consume(this.sim.state.events, this.sim.state); this.renderer.consumeEvents(this.sim.state.events); for (const ev of this.sim.state.events) if (ev.t === 'playerHurt') this.hitstop = 0.05; else if (ev.t === 'bossDeath') this.hitstop = 0.12;
         if (this.sim.state.phase === 'gameOver') { this.gameOver(this.sim.state.events.some(e => e.t === 'gameOver' && e.victory)); break; }
       }
     }
