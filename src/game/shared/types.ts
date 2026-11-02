@@ -60,6 +60,8 @@ export type SimEvent =
   | { t: 'freeze'; ms: number }                       // hit-stop request (client skips stepping for ms)
   | { t: 'slow'; scale: number; secs: number }          // slow-mo request (level-up etc.)
   | { t: 'evolve'; id: number; weapon: string }         // weapon reached max level (evolution moment)
+  | { t: 'bossTelegraph'; x: number; z: number; dx: number; dz: number; windup: number; bossId: string } // charge wind-up starts (red lane); VFX/audio cue
+  | { t: 'bossSlam'; x: number; z: number; bossId: string }                                              // charge ends / impact
   | { t: 'biome'; next: string }                        // boss of this biome died: client swaps arena after the reward card
   | { t: 'gameOver'; victory: boolean };
 

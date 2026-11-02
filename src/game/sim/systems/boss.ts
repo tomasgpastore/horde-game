@@ -26,8 +26,8 @@ export const bossSystem: System = { name: 'boss', update(s, c) {
   }
   b.t += c.dt; const dx = p.x - e.x[i], dz = p.z - e.z[i], dist = Math.hypot(dx, dz) || 1;
   if (b.mode === 0) { e.x[i] += dx / dist * d.speed * c.dt; e.z[i] += dz / dist * d.speed * c.dt; e.facing[i] = Math.atan2(dx, dz);
-    if (b.t > d.cd) { b.mode = 1; b.t = 0; } }
+    if (b.t > d.cd) { b.mode = 1; b.t = 0; s.events.push({ t: 'bossTelegraph', x: e.x[i], z: e.z[i], dx: dx / dist, dz: dz / dist, windup: d.windup, bossId: b.id }); } }
   else if (b.mode === 1) { b.dx = dx / dist; b.dz = dz / dist; e.facing[i] = Math.atan2(dx, dz); // telegraph tracks target, then locks
     if (b.t > d.windup) { b.mode = 2; b.t = 0; } }
-  else { e.x[i] += b.dx * d.charge * c.dt; e.z[i] += b.dz * d.charge * c.dt; if (b.t > 0.55) { b.mode = 0; b.t = 0; } }
+  else { e.x[i] += b.dx * d.charge * c.dt; e.z[i] += b.dz * d.charge * c.dt; if (b.t > 0.55) { b.mode = 0; b.t = 0; s.events.push({ t: 'bossSlam', x: e.x[i], z: e.z[i], bossId: b.id }, { t: 'freeze', ms: 40 }); } }
 } };
