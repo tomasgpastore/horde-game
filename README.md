@@ -6,6 +6,8 @@ A free 3D low-poly horde-survivor roguelite that runs in your browser. No downlo
 
 ▶ **Play: https://emberhorde.fly.dev**
 
+![EMBERHORDE gameplay](docs/hero.gif)
+
 ## Features
 - 6 weapons: Ember Bolt, Orbit Blades, Frost Nova, Chain Lightning, Lava Trail, Seeker Spears
 - 6 weapon evolutions: at level 8, pair a weapon with its passive
