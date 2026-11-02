@@ -32,7 +32,7 @@ export class Game {
   applySettings(s: Settings) {
     this.settings = s;
     audio.setVolume('master', s.volume); audio.setVolume('music', s.music); audio.setVolume('sfx', s.sfx);
-    const r = (this.renderer as any)?.three; if (r) r.setPixelRatio(Math.min(devicePixelRatio, s.quality === 'low' ? 1 : s.quality === 'high' ? 2 : 1.5));
+    const r = (this.renderer as any)?.three; if (r) (this.renderer as any).setQuality(s.quality);
     dispatchEvent(new Event('resize')); // re-apply size with new pixel ratio
     // TODO Engine: screenshake honours s.shake
   }

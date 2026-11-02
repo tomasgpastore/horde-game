@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { SimState, SimEvent, ArenaDef, ArenaHandle } from '@shared/types';
 import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
 
@@ -7,6 +11,10 @@ import { MAX_ENEMIES, MAX_PROJECTILES, MAX_PICKUPS } from '@shared/types';
 export class Renderer {
   three: THREE.WebGLRenderer; scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
   projMesh: THREE.InstancedMesh; ringMesh: THREE.InstancedMesh; gemMesh: THREE.InstancedMesh; enemyMesh: THREE.InstancedMesh; flashColor = new THREE.Color(0xffffff); baseColors = [0xe0602a, 0xc02a8a, 0x8fd13a];
+  shake = 0; composer: EffectComposer; bloomOn = new URLSearchParams(location.search).get('bloom') !== '0'; // ?bloom=0 for software-GL CI shake = 0;
+  // shard particles (kill bursts): SoA ring buffer, one InstancedMesh
+  static NP = 2000; pMesh: THREE.InstancedMesh; px = new Float32Array(Renderer.NP * 3); pv = new Float32Array(Renderer.NP * 3); pl = new Float32Array(Renderer.NP); pHead = 0;
+  setQuality(q: 'low' | 'med' | 'high') { this.bloomOn = q !== 'low' && new URLSearchParams(location.search).get('bloom') !== '0'; const pr = Math.min(devicePixelRatio, q === 'low' ? 1 : q === 'high' ? 2 : 1.5); this.three.setPixelRatio(pr); this.composer.setPixelRatio(pr); this.composer.setSize(innerWidth, innerHeight); }
   playerMesh: THREE.Mesh; arena: ArenaHandle; m = new THREE.Object3D();
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -26,13 +34,35 @@ export class Renderer {
     for (const m of [this.projMesh, this.gemMesh]) { m.frustumCulled = false; this.scene.add(m); }
     this.playerMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 0.8, 4, 8), new THREE.MeshLambertMaterial({ color: 0xffc857 }));
     this.playerMesh.position.y = 0.8; this.playerMesh.castShadow = true; this.scene.add(this.playerMesh);
-    const onResize = () => { this.three.setSize(innerWidth, innerHeight, false); this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); };
+    this.pMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffffff }), Renderer.NP);
+    this.pMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Renderer.NP * 3), 3); this.pMesh.frustumCulled = false; this.pMesh.count = 0; this.scene.add(this.pMesh);
+    this.composer = new EffectComposer(this.three); this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.55, 0.55)); this.composer.addPass(new OutputPass());
+    const onResize = () => { this.three.setSize(innerWidth, innerHeight, false); this.composer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); };
     addEventListener('resize', onResize); onResize();
   }
-  consumeEvents(_ev: SimEvent[]) { /* TODO Engine: spawn particles/damage numbers/screenshake */ }
+  private burst(x: number, z: number, n: number, col: number, spd: number) {
+    for (let k = 0; k < n; k++) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; const a = Math.random() * 6.283, v = spd * (0.4 + Math.random());
+      this.px[i * 3] = x; this.px[i * 3 + 1] = 0.6; this.px[i * 3 + 2] = z; this.pv[i * 3] = Math.cos(a) * v; this.pv[i * 3 + 1] = 2 + Math.random() * 4; this.pv[i * 3 + 2] = Math.sin(a) * v; this.pl[i] = 0.5 + Math.random() * 0.4; this.pcol[i] = col; }
+  }
+  pcol = new Uint32Array(Renderer.NP);
+  consumeEvents(ev: SimEvent[]) { // visual-only randomness is fine here (never feeds the sim)
+    for (const e of ev) {
+      if (e.t === 'kill') this.burst(e.x, e.z, 7, this.baseColors[e.enemyKind % 3], 5);
+      else if (e.t === 'hit') this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3);
+      else if (e.t === 'playerHurt') this.shake = Math.min(1, this.shake + 0.6);
+      else if (e.t === 'levelUp') this.burst(this.playerMesh.position.x, this.playerMesh.position.z, 40, 0x4de8ff, 9);
+    }
+  }
   render(s: SimState, dt: number, _alpha: number) {
     const p = s.players[0]; this.playerMesh.position.set(p.x, 0.8, p.z); this.playerMesh.rotation.y = p.facing;
-    this.camera.position.set(p.x, 16, p.z + 11); this.camera.lookAt(p.x, 0, p.z);
+    this.shake = Math.max(0, this.shake - dt * 2.5); const sh = this.shake * this.shake * 0.5;
+    this.camera.position.set(p.x + (Math.random() - 0.5) * sh, 16 + (Math.random() - 0.5) * sh * 0.5, p.z + 11 + (Math.random() - 0.5) * sh); this.camera.lookAt(p.x, 0, p.z);
+    { let n = 0; for (let i = 0; i < Renderer.NP; i++) { if (this.pl[i] <= 0) continue; this.pl[i] -= dt; if (this.pl[i] <= 0) continue;
+        this.pv[i * 3 + 1] -= 14 * dt; this.px[i * 3] += this.pv[i * 3] * dt; this.px[i * 3 + 1] = Math.max(0.05, this.px[i * 3 + 1] + this.pv[i * 3 + 1] * dt); this.px[i * 3 + 2] += this.pv[i * 3 + 2] * dt;
+        this.m.position.set(this.px[i * 3], this.px[i * 3 + 1], this.px[i * 3 + 2]); this.m.rotation.set(this.pl[i] * 9, this.pl[i] * 7, 0); this.m.scale.setScalar(Math.min(1, this.pl[i] * 2.5)); this.m.updateMatrix();
+        this.pMesh.setMatrixAt(n, this.m.matrix); this.flashColor.setHex(this.pcol[i]); this.pMesh.setColorAt(n, this.flashColor); n++; }
+      this.m.scale.setScalar(1); this.pMesh.count = n; this.pMesh.instanceMatrix.needsUpdate = true; if (this.pMesh.instanceColor) this.pMesh.instanceColor.needsUpdate = true; }
     const e = s.enemies; let n = 0;
     for (let i = 0; i < e.count; i++) { if (!e.alive[i]) continue;
       this.m.position.set(e.x[i], 0, e.z[i]); this.m.rotation.set(0, e.facing[i], 0); this.m.updateMatrix(); this.enemyMesh.setMatrixAt(n, this.m.matrix);
@@ -49,6 +79,6 @@ export class Renderer {
       this.m.position.set(pk.x[i], 0.4 + Math.sin(s.time * 4 + i) * 0.1, pk.z[i]); this.m.rotation.set(0, s.time * 2 + i, 0); this.m.updateMatrix(); this.gemMesh.setMatrixAt(n++, this.m.matrix); }
     this.gemMesh.count = n; this.gemMesh.instanceMatrix.needsUpdate = true;
     this.arena.update(dt, s.time);
-    this.three.render(this.scene, this.camera);
+    if (this.bloomOn) this.composer.render(dt); else this.three.render(this.scene, this.camera);
   }
 }
