@@ -27,7 +27,7 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement, def: ArenaDef) {
     this.three = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.three.setPixelRatio(Math.min(devicePixelRatio, 2)); this.three.shadowMap.enabled = true;
-    this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.Fog(def.palette.fog, 25, 70);
+    this.scene.background = new THREE.Color(def.palette.sky); this.scene.fog = new THREE.FogExp2(def.palette.fog, 0.017); this.three.toneMapping = THREE.ACESFilmicToneMapping; this.three.toneMappingExposure = 1.25;
     this.arena = def.build(this.scene);
     this.tele = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, depthWrite: false })); this.tele.rotation.x = -Math.PI / 2; this.tele.visible = false; this.scene.add(this.tele);
     this.scene.traverse(o => { if ((o as THREE.DirectionalLight).isDirectionalLight && !this.sun) this.sun = o as THREE.DirectionalLight; });
