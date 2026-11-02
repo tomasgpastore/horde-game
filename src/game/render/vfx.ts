@@ -62,7 +62,18 @@ export class Vfx {
   private initTrail(scene: THREE.Scene) { this.tm = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }), Vfx.NT);
     this.tm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Vfx.NT * 3), 3); this.tm.frustumCulled = false; this.tm.count = 0; scene.add(this.tm); }
   trail(x: number, y: number, z: number, color = 0x3df2ff) { const i = this.th; this.th = (i + 1) % Vfx.NT; this.tx[i * 3] = x; this.tx[i * 3 + 1] = y; this.tx[i * 3 + 2] = z; this.tl[i] = 0.35; this.tc[i] = color; }
+  // --- boss charge telegraph / slam, driven by sim events bossTelegraph / bossSlam (Artist) ---
+  private lane?: THREE.Mesh; private laneT = 0; private laneMax = 1; private onShake?: (a: number) => void;
+  /** wire a camera-shake callback once: vfx.onSlamShake = a => rig.addTrauma(a) */
+  set onSlamShake(f: (a: number) => void) { this.onShake = f; }
+  telegraph(scene: THREE.Scene, x: number, z: number, dx: number, dz: number, windup: number, color: number) {
+    if (!this.lane) { this.lane = createTelegraph(); scene.add(this.lane); }
+    const L = 22; this.lane.position.set(x + dx * L / 2, 0.06, z + dz * L / 2); this.lane.rotation.set(-Math.PI / 2, 0, -Math.atan2(dx, dz)); this.lane.scale.set(3.2, L, 1);
+    this.laneT = this.laneMax = Math.max(0.2, windup); this.lane.visible = true; this.ring(x, z, color, 5, windup, 0.1);
+  }
+  slam(x: number, z: number, color: number) { if (this.lane) this.lane.visible = false; this.laneT = 0; this.ring(x, z, color, 11, 0.55); this.ring(x, z, 0xffffff, 6, 0.35, 0.25); this.disc(x, z, color, 9, 0.3); this.bossShards(x, z, color, 28); this.onShake?.(0.8); }
   update(dt: number) {
+    if (this.lane && this.laneT > 0) { this.laneT -= dt; const f = 1 - Math.max(0, this.laneT) / this.laneMax; (this.lane.material as THREE.MeshBasicMaterial).opacity = (0.3 + 0.5 * f) * (0.7 + 0.3 * Math.abs(Math.sin(f * 24))); if (this.laneT <= 0) this.lane.visible = false; }
     this.updateDisc(dt); this.updateShards(dt);
     { let k = 0; for (let i = 0; i < Vfx.NT; i++) { if (this.tl[i] <= 0) continue; this.tl[i] -= dt; if (this.tl[i] <= 0) continue; const f = this.tl[i] / 0.35;
         this.o.position.set(this.tx[i * 3], this.tx[i * 3 + 1], this.tx[i * 3 + 2]); this.o.scale.setScalar(f); this.o.rotation.set(0, 0, 0); this.o.updateMatrix(); this.tm.setMatrixAt(k, this.o.matrix); this.c.setHex(this.tc[i]).multiplyScalar(2.5 * f); this.tm.setColorAt(k++, this.c); }
