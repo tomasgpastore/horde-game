@@ -5,7 +5,10 @@ import { enemyDef, BOSS_KIND } from '../content/enemies';
 import { killEnemy } from './projectiles';
 /** Ember Burst (key E / gamepad X): radius burst, damage + knockback, clears hostile projectiles. Cooldown in p.stats.abilityCd (seconds left; HUD reads it).
  *  Emits {t:'shoot', weapon:'ember_burst'} for render/audio (+ freeze). */
+/** Launch scope: Ember Burst is OFF (Studio Head decision). Flip to true to re-enable E / gamepad X. */
+export const ABILITY_ENABLED = false;
 export const abilitySystem: System = { name: 'ability', update(s, c) {
+  if (!ABILITY_ENABLED) return;
   const e = s.enemies;
   for (const p of s.players) {
     if (!p.active || p.dead) continue;
