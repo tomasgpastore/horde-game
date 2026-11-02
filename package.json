@@ -10,7 +10,8 @@
     "assets": "node scripts/optimize-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "test:determinism": "node tests/determinism.test.mjs"
+    "test:determinism": "node tests/determinism.test.mjs",
+    "test:progress": "node tests/progress.test.mjs"
   },
   "dependencies": {
     "@fontsource/rajdhani": "^5.3.0",

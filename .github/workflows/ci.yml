@@ -23,6 +23,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run test:determinism
+      - run: npm run test:progress
       - run: npm run build
       - id: pw
         run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
