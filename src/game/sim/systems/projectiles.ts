@@ -14,8 +14,8 @@ export function spawnGem(s: import('@shared/types').SimState, x: number, z: numb
 }
 
 export function killEnemy(s: import('@shared/types').SimState, j: number) {
-  const e = s.enemies, def = enemyDef(e.kind[j]); e.alive[j] = 0; s.kills++; if (e.flags[j] & 1) { spawnGem(s, e.x[j], e.z[j], 0, 1); e.flags[j] = 0; } else spawnGem(s, e.x[j], e.z[j], def.xp);
-  s.events.push({ t: 'kill', x: e.x[j], z: e.z[j], enemyKind: e.kind[j] });
+  const e = s.enemies, def = enemyDef(e.kind[j]), elite = !!(e.flags[j] & 1); e.alive[j] = 0; s.kills++; if (elite) s.events.push({ t: 'freeze', ms: 70 }); if (e.flags[j] & 1) { spawnGem(s, e.x[j], e.z[j], 0, 1); e.flags[j] = 0; } else spawnGem(s, e.x[j], e.z[j], def.xp);
+  s.events.push({ t: 'kill', x: e.x[j], z: e.z[j], enemyKind: e.kind[j], elite });
 }
 export const projectileSystem: System = { name: 'projectiles', update(s, c) {
   const pr = s.projectiles, e = s.enemies;

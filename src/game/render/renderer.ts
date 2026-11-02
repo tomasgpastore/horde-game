@@ -77,7 +77,7 @@ export class Renderer {
   private trail(x: number, z: number) { const i = this.pHead; this.pHead = (i + 1) % Renderer.NP; this.px[i * 3] = x; this.px[i * 3 + 1] = 0.8; this.px[i * 3 + 2] = z; this.pv[i * 3] = this.pv[i * 3 + 2] = 0; this.pv[i * 3 + 1] = 1; this.pl[i] = 0.28; this.pcol[i] = 0xffb347; }
   consumeEvents(ev: SimEvent[]) { // visual-only randomness is fine here (never feeds the sim)
     for (const e of ev) {
-      if (e.t === 'kill') this.burst(e.x, e.z, 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), 5);
+      if (e.t === 'kill') { this.burst(e.x, e.z, e.elite ? 26 : 7, (KIND_COLORS[e.enemyKind] ?? 0xe0602a), e.elite ? 9 : 5); if (e.elite) { this.rig.addTrauma(0.45); this.vfx.ring(e.x, e.z, 0xffc857, 4.5, 0.5); } } // elite kill: shake + gold ring (+70ms hit-stop from the sim)
       else if (e.t === 'shoot') { if (e.weapon === 'frost_nova') { this.vfx.nova(e.x, e.z, 5.5); this.burst(e.x, e.z, 36, 0x9fe8ff, 11); this.rig.addTrauma(0.15); } else if (e.weapon === 'ember_bolt') { const f = this.playerMesh.rotation.y; this.vfx.muzzle(e.x, e.z, Math.sin(f), Math.cos(f)); } }
       else if (e.t === 'hit') { this.vfx.impact(e.x, e.z, e.crit ? 0xffffff : 0xffd35a); this.burst(e.x, e.z, e.crit ? 4 : 1, 0xffe9a8, 3); if (this.fx === 1 || e.crit) this.dmg.add(e.x, e.z, e.dmg, e.crit); }
       else if (e.t === 'telegraph') this.vfx.ring(e.x, e.z, 0xff3a3a, 2.4, 0.6);

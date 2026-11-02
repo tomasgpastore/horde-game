@@ -31,7 +31,7 @@ const MIXES: SpawnEntry[][] = [
   [{ kind: 2, weight: 2 }, { kind: 3, weight: 2 }, { kind: 4, weight: 1 }, { kind: 5, weight: 2 }, { kind: 7, weight: 2 }],
 ];
 /** Early-run spawn-rate multipliers per wave (40s each): gentle first 80s for new players, ramp to the full curve by ~2:00. */
-const EARLY_MUL = [0.55, 0.85, 1.9, 2.0, 1.6];
+const EARLY_MUL = [0.8, 1.15, 1.9, 2.0, 1.6];
 /** Waves are generated from a formula so there is no end to the table; tweak numbers here only. */
 export function waveFor(wave: number): WaveDef {
   const w = Math.max(1, wave);

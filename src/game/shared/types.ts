@@ -48,7 +48,7 @@ export interface PlayerState {
 /** One-shot things the sim emits each tick for render/audio/ui (particles, sfx, damage numbers). Cleared every tick. */
 export type SimEvent =
   | { t: 'hit'; x: number; z: number; dmg: number; crit: boolean; enemyKind: number }
-  | { t: 'kill'; x: number; z: number; enemyKind: number }
+  | { t: 'kill'; x: number; z: number; enemyKind: number; elite?: boolean }
   | { t: 'shoot'; weapon: string; x: number; z: number; owner: number }
   | { t: 'playerHurt'; id: number; dmg: number }
   | { t: 'pickup'; kind: number; id: number }
@@ -79,7 +79,7 @@ export interface SimState {
   /** World-owned spawner state (plain numbers => snapshot/rollback safe). */
   /** Active boss (enemy slot `idx`); mode 0 chase, 1 telegraph, 2 charge. */
   boss: { idx: number; id: string; maxHp: number; t: number; mode: number; dx: number; dz: number } | null;
-  spawner: { budget: number; nextSurge: number; lastWave: number; boss: boolean };
+  spawner: { budget: number; nextSurge: number; lastWave: number; boss: boolean; opener?: boolean };
 }
 
 /** Arena = world module's contract with sim (collision/spawn) and render (scenery). */
