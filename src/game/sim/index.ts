@@ -20,7 +20,8 @@ export function createState(seed: number, arena: ArenaDef, playerCount = 1): Sim
       stats: { moveSpeed: 6, damageMult: 1, area: 1, pickupRadius: 2.5, cooldownMult: 1 }, dead: false };
   });
   return { tick: 0, time: 0, seed, players, enemies: makeEnemies(), projectiles: makeProjectiles(), pickups: makePickups(),
-    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, levelChoices: [] };
+    events: [], phase: 'running', wave: 0, kills: 0, gold: 0, levelChoices: [],
+    spawner: { budget: 0, nextSurge: 20, lastWave: 0, boss: false } };
 }
 
 /** Deterministic fixed-step simulation. Same (seed, input stream) => same state. Runs in browser now, Node server later. */

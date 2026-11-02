@@ -68,6 +68,8 @@ export interface SimState {
   wave: number; kills: number; gold: number;
   /** Upgrade ids offered while phase==='levelUp' (sim.choose(index) resolves). */
   levelChoices: string[];
+  /** World-owned spawner state (plain numbers => snapshot/rollback safe). */
+  spawner: { budget: number; nextSurge: number; lastWave: number; boss: boolean };
 }
 
 /** Arena = world module's contract with sim (collision/spawn) and render (scenery). */

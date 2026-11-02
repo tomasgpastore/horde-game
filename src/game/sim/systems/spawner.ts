@@ -5,8 +5,6 @@ import type { SimState } from '@shared/types';
 import { waveFor, waveAt, WAVE_SECONDS, ARENA_BOSS } from '@world/waves';
 /** World-owned: wave pacing, off-screen spawn ring, ring surges, boss events. Deterministic (ctx.rng only).
  *  Enemy base stats come from Gameplay; here we only set position/kind/hp placeholder via `spawnHp`. */
-interface Acc { budget: number; nextSurge: number; lastWave: number; boss: boolean }
-const acc = new WeakMap<SimState, Acc>();
 export const SPAWN_DIST = 24;
 
 export const spawnHp = (kind: number, wave: number) => (6 + kind * 8) * (1 + wave * 0.12);
@@ -19,9 +17,8 @@ function spawnOne(s: SimState, kind: number, x: number, z: number): boolean {
   if (i >= e.count) e.count = i + 1;
   return true;
 }
-let aliveCount = 0;
 export const spawner: System = { name: 'spawner', update(s, c) {
-  let a = acc.get(s); if (!a) { a = { budget: 0, nextSurge: 20, lastWave: 0, boss: false }; acc.set(s, a); }
+  const a = s.spawner; let aliveCount = 0;
   const wave = waveAt(s.time), def = waveFor(wave), R = c.arena.radius;
   if (wave !== a.lastWave) { a.lastWave = wave; s.wave = wave; s.events.push({ t: 'waveStart', wave });
   }
@@ -29,7 +26,7 @@ export const spawner: System = { name: 'spawner', update(s, c) {
   if (bd && !a.boss && s.time >= bd.time) { a.boss = true; const ang = c.rng.range(0, Math.PI * 2);
     s.events.push({ t: 'bossSpawn', x: Math.cos(ang) * (R - 4), z: Math.sin(ang) * (R - 4), bossId: bd.bossId }); }
   // alive count
-  const e = s.enemies; aliveCount = 0; for (let i = 0; i < e.count; i++) aliveCount += e.alive[i];
+  const e = s.enemies; for (let i = 0; i < e.count; i++) aliveCount += e.alive[i];
   // players to target
   const act: number[] = []; for (const p of s.players) if (p.active && !p.dead) act.push(p.id);
   if (!act.length) return;
