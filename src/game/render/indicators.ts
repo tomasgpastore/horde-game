@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { SimState } from '@shared/types';
 
-const MAX = 10, PAD = 44, BOSS = '#ff3b3b', ELITE = '#ffc83a', CHEST = '#6fe8ff';
+const MAX = 8, PAD = 44, BOSS = '#ff3b3b', ELITE = '#ffc83a', CHEST = '#ffe14a';
 export const CHEST_KIND = 1; // pickup kind per Tech Lead
 
 /** Edge-of-screen arrows (pooled DOM) pointing at off-screen boss / elites / chests. Read-only on SimState. */
