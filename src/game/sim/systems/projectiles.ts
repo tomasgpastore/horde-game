@@ -20,7 +20,7 @@ export function killEnemy(s: import('@shared/types').SimState, j: number) {
 export const projectileSystem: System = { name: 'projectiles', update(s, c) {
   const pr = s.projectiles, e = s.enemies;
   for (let i = 0; i < pr.count; i++) { if (!pr.alive[i]) continue;
-    if (pr.kind[i] !== 0) { if (pr.kind[i] !== 1) { pr.life[i] -= c.dt; if (pr.life[i] <= 0) pr.alive[i] = 0; } continue; } // non-bolt kinds are driven by weapons.ts
+    if (pr.kind[i] !== 0 && pr.kind[i] !== 5) { if (pr.kind[i] !== 1) { pr.life[i] -= c.dt; if (pr.life[i] <= 0) pr.alive[i] = 0; } continue; } // bolt-like kinds (0 bolt, 5 seeker spear) move+collide here; others are driven by weapons.ts
     pr.x[i] += pr.vx[i] * c.dt; pr.z[i] += pr.vz[i] * c.dt; pr.life[i] -= c.dt;
     if (pr.life[i] <= 0) { pr.alive[i] = 0; continue; }
     const gx = cellX(pr.x[i]), gz = cellX(pr.z[i]);
