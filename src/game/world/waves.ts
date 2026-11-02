@@ -8,6 +8,8 @@ export interface WaveDef {
   mix: SpawnEntry[];          // weighted kinds
   surge?: { every: number; count: number }; // ring-surge: `count` enemies encircle the player every N seconds
 }
+/** Global alive-enemy cap (perf budget: 60fps target on mid GPUs). Raise only with QA perf data. */
+export const MAX_ALIVE = 400;
 export const WAVE_SECONDS = 40;
 /** Per-arena boss: emitted as bossSpawn at `time` seconds (GDD: min 5/10/15). */
 export const ARENA_BOSS: Record<string, { bossId: string; time: number }> = {
@@ -30,7 +32,7 @@ export function waveFor(wave: number): WaveDef {
   return {
     wave: w,
     rate: 1.2 + w * 0.9 + Math.pow(w, 1.35) * 0.15,
-    cap: Math.min(1500, 60 + w * 45),
+    cap: Math.min(MAX_ALIVE, 60 + w * 45),
     mix: MIXES[Math.min(MIXES.length - 1, Math.floor((w - 1) / 2))],
     surge: w >= 3 ? { every: 25, count: 12 + w * 3 } : undefined,
   };
